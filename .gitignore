@@ -1,0 +1,44 @@
+# Documentation and tests
+Docs/
+Docs/Sprints.md
+Tests/
+
+# Secrets and environment configurations
+.env
+.env.*
+!.env.example
+Secrets/
+google-services.json
+*.keystore
+*-firebase-adminsdk-*.json
+client_secret_*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Android & Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/**/generated/
+*.apk
+*.aab
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
