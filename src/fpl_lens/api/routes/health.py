@@ -1,8 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any
+
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+
 from src.fpl_lens.db.models import IngestionRun, PublishedProjection
 from src.fpl_lens.db.session import get_db
 from src.fpl_lens.logging import logger
@@ -17,8 +20,8 @@ def health_check(db: Session = Depends(get_db)) -> JSONResponse:
     of the last successful ingestion and projection runs.
     """
     db_status = "connected"
-    last_ingestion_at: Optional[str] = None
-    last_projection_at: Optional[str] = None
+    last_ingestion_at: str | None = None
+    last_projection_at: str | None = None
 
     try:
         # Check database connectivity
@@ -39,7 +42,7 @@ def health_check(db: Session = Depends(get_db)) -> JSONResponse:
         if last_proj:
             last_projection_at = last_proj.isoformat()
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "status": "ok",
             "database": db_status,
             "last_ingestion_at": last_ingestion_at,
@@ -47,8 +50,8 @@ def health_check(db: Session = Depends(get_db)) -> JSONResponse:
         }
         return JSONResponse(status_code=status.HTTP_200_OK, content=payload)
 
-    except Exception as e:
-        logger.error("Health check database failure: %s", e)
+    except SQLAlchemyError as exc:
+        logger.error("Health check database failure: %s", exc)
         payload = {
             "status": "degraded",
             "database": "unreachable",
@@ -56,5 +59,6 @@ def health_check(db: Session = Depends(get_db)) -> JSONResponse:
             "last_projection_at": None,
         }
         return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=payload
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=payload,
         )

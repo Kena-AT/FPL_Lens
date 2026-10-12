@@ -1,6 +1,7 @@
 import io
 import json
 import logging
+
 from src.fpl_lens.logging import JsonFormatter, RedactionFilter, redact_text
 
 

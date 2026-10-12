@@ -2,11 +2,11 @@ import contextvars
 import json
 import logging
 import re
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 # Context variable to track request_id across async execution
-request_id_ctx: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+request_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "request_id", default=None
 )
 
@@ -73,7 +73,7 @@ class RedactionFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         try:
             formatted_msg = record.getMessage()
-        except Exception:
+        except (TypeError, ValueError, KeyError, IndexError):
             formatted_msg = str(record.msg)
 
         record.msg = redact_text(formatted_msg)
@@ -85,8 +85,8 @@ class JsonFormatter(logging.Formatter):
     """Outputs structured JSON log records with timestamps and request IDs."""
 
     def format(self, record: logging.LogRecord) -> str:
-        log_data: Dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+        log_data: dict[str, Any] = {
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

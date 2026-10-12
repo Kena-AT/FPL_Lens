@@ -1,4 +1,5 @@
 import uvicorn
+
 from src.fpl_lens.api.app import app
 from src.fpl_lens.config import settings
 from src.fpl_lens.logging import logger

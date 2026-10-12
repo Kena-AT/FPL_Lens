@@ -1,15 +1,15 @@
 import os
 from pathlib import Path
-from typing import Optional
+
 from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
 from pydantic import Field
+from pydantic_settings import BaseSettings
 
 # Load local .env if present
 load_dotenv()
 
 
-def resolve_secret_ref(ref_or_val: Optional[str]) -> Optional[str]:
+def resolve_secret_ref(ref_or_val: str | None) -> str | None:
     """
     Resolves secret values that may be references (*_REF).
     If the value points to an existing file path, read and return the file content.
@@ -42,11 +42,11 @@ class Settings(BaseSettings):
         default="postgresql://localhost:5432/fpl_lens",
         validation_alias="DATABASE_URL",
     )
-    DATABASE_URL_POOLED: Optional[str] = Field(
+    DATABASE_URL_POOLED: str | None = Field(
         default=None,
         validation_alias="DATABASE_URL_POOLED",
     )
-    DATABASE_URL_REF: Optional[str] = Field(
+    DATABASE_URL_REF: str | None = Field(
         default=None,
         validation_alias="DATABASE_URL_REF",
     )
@@ -62,23 +62,23 @@ class Settings(BaseSettings):
     )
 
     # Auth & Tokens
-    JWT_SIGNING_KEY: Optional[str] = Field(default=None, validation_alias="JWT_SIGNING_KEY")
-    JWT_SIGNING_KEY_REF: Optional[str] = Field(default=None, validation_alias="JWT_SIGNING_KEY_REF")
+    JWT_SIGNING_KEY: str | None = Field(default=None, validation_alias="JWT_SIGNING_KEY")
+    JWT_SIGNING_KEY_REF: str | None = Field(default=None, validation_alias="JWT_SIGNING_KEY_REF")
     JWT_ISSUER: str = Field(default="fpl-lens-api", validation_alias="JWT_ISSUER")
     JWT_AUDIENCE: str = Field(default="fpl-lens-client", validation_alias="JWT_AUDIENCE")
     ACCESS_TOKEN_TTL_SECONDS: int = Field(default=900, validation_alias="ACCESS_TOKEN_TTL_SECONDS")
     REFRESH_TOKEN_TTL_DAYS: int = Field(default=30, validation_alias="REFRESH_TOKEN_TTL_DAYS")
 
     # Google Auth
-    GOOGLE_ANDROID_CLIENT_ID: Optional[str] = Field(
+    GOOGLE_ANDROID_CLIENT_ID: str | None = Field(
         default=None,
         validation_alias="GOOGLE_ANDROID_CLIENT_ID",
     )
-    GOOGLE_WEB_CLIENT_ID: Optional[str] = Field(
+    GOOGLE_WEB_CLIENT_ID: str | None = Field(
         default=None,
         validation_alias="GOOGLE_WEB_CLIENT_ID",
     )
-    GOOGLE_WEB_CLIENT_SECRET: Optional[str] = Field(
+    GOOGLE_WEB_CLIENT_SECRET: str | None = Field(
         default=None,
         validation_alias="GOOGLE_WEB_CLIENT_SECRET",
     )
@@ -86,28 +86,28 @@ class Settings(BaseSettings):
     # SMTP (Brevo)
     SMTP_HOST: str = Field(default="smtp-relay.brevo.com", validation_alias="SMTP_HOST")
     SMTP_PORT: int = Field(default=587, validation_alias="SMTP_PORT")
-    SMTP_USERNAME: Optional[str] = Field(default=None, validation_alias="SMTP_USERNAME")
-    SMTP_PASSWORD: Optional[str] = Field(default=None, validation_alias="SMTP_PASSWORD")
-    SMTP_USER_REF: Optional[str] = Field(default=None, validation_alias="SMTP_USER_REF")
-    SMTP_PASSWORD_REF: Optional[str] = Field(default=None, validation_alias="SMTP_PASSWORD_REF")
+    SMTP_USERNAME: str | None = Field(default=None, validation_alias="SMTP_USERNAME")
+    SMTP_PASSWORD: str | None = Field(default=None, validation_alias="SMTP_PASSWORD")
+    SMTP_USER_REF: str | None = Field(default=None, validation_alias="SMTP_USER_REF")
+    SMTP_PASSWORD_REF: str | None = Field(default=None, validation_alias="SMTP_PASSWORD_REF")
     EMAIL_FROM_ADDRESS: str = Field(
         default="noreply@fpl-lens.app",
         validation_alias="EMAIL_FROM_ADDRESS",
     )
 
     # FCM / Push
-    FIREBASE_CREDENTIALS_PATH: Optional[str] = Field(
+    FIREBASE_CREDENTIALS_PATH: str | None = Field(
         default=None,
         validation_alias="FIREBASE_CREDENTIALS_PATH",
     )
-    FCM_SERVICE_ACCOUNT_REF: Optional[str] = Field(
+    FCM_SERVICE_ACCOUNT_REF: str | None = Field(
         default=None,
         validation_alias="FCM_SERVICE_ACCOUNT_REF",
     )
 
     # Internal Jobs Token
-    JOB_TOKEN: Optional[str] = Field(default=None, validation_alias="JOB_TOKEN")
-    JOB_TOKEN_REF: Optional[str] = Field(default=None, validation_alias="JOB_TOKEN_REF")
+    JOB_TOKEN: str | None = Field(default=None, validation_alias="JOB_TOKEN")
+    JOB_TOKEN_REF: str | None = Field(default=None, validation_alias="JOB_TOKEN_REF")
 
     model_config = {
         "extra": "ignore",
@@ -139,14 +139,14 @@ class Settings(BaseSettings):
 
         return raw_url
 
-    def get_effective_job_token(self) -> Optional[str]:
+    def get_effective_job_token(self) -> str | None:
         if self.JOB_TOKEN_REF:
             resolved = resolve_secret_ref(self.JOB_TOKEN_REF)
             if resolved:
                 return resolved
         return self.JOB_TOKEN
 
-    def get_effective_smtp_password(self) -> Optional[str]:
+    def get_effective_smtp_password(self) -> str | None:
         if self.SMTP_PASSWORD_REF:
             resolved = resolve_secret_ref(self.SMTP_PASSWORD_REF)
             if resolved:

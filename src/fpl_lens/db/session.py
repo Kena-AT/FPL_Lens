@@ -1,6 +1,8 @@
-from typing import Generator
+from collections.abc import Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
 from src.fpl_lens.config import settings
 
 # Create engine using effective database URL (pooled endpoint by default)

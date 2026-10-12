@@ -1,7 +1,9 @@
 import uuid
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
 from src.fpl_lens.db.models import ModelVersion, User
 
 

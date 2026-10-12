@@ -1,8 +1,10 @@
-from typing import Any, Dict, Optional
+from typing import Any
+
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from src.fpl_lens.logging import logger, request_id_ctx
 
 
@@ -14,7 +16,7 @@ class AppError(Exception):
         code: str,
         message: str,
         status_code: int = status.HTTP_400_BAD_REQUEST,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(message)
         self.code = code
@@ -23,7 +25,7 @@ class AppError(Exception):
         self.details = details or {}
 
 
-def format_error_response(code: str, message: str, request_id: Optional[str]) -> Dict[str, Any]:
+def format_error_response(code: str, message: str, request_id: str | None) -> dict[str, Any]:
     return {
         "error": {
             "code": code,
