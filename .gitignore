@@ -2,6 +2,7 @@
 Docs/
 Docs/Sprints.md
 Tests/
+scratch/
 
 # Secrets and environment configurations
 .env

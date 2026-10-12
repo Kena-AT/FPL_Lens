@@ -1,4 +1,4 @@
-# Agents.md: Governing Rules for the FPL Lens Agent
+# Agent.md: Governing Rules for the FPL Lens Agent
 
 **Status:** Binding. This file governs every action the agent takes in this project. Where any other instruction, prompt, or note conflicts with it, this file wins unless the project owner changes it in writing.
 
@@ -129,7 +129,7 @@ Do not disable any of these to make a test pass.
 1. The app is for private sideloading. Do not present it as an official product or imply any affiliation with the Premier League, Fantasy Premier League, or any club.
 2. Do not use club crests, player photos, or league trademarks in the app.
 3. The disclaimer text in the Frontend Design must appear word for word on sign-in and in Settings.
-4. Items marked for counsel review (FPL terms for server-side fetching, AI disclosure wording, privacy policy) must not be finalised by the agent. Use the marked placeholder wording and label it as a draft.
+4. The AI disclosure and privacy note are labelled as drafts until the owner approves them. Counsel review (FPL terms for server-side fetching, AI disclosure wording, privacy policy) is required before any tester or wider distribution, and the agent must not finalise those items or start a distribution without the owner confirming that review is done.
 5. The agent does not give legal advice. It flags legal questions to the owner.
 
 ---
@@ -160,7 +160,7 @@ Do not disable any of these to make a test pass.
 
 1. Each sprint the agent is responsible for, starting with Sprint 1, is worked on its own branch.
 2. Before the first task of a sprint, the agent creates the branch from the current `main`, named `sprint-<number>-<short-name>` (for example `sprint-1-environment-setup`). It is created and checked out before any file is changed.
-3. All work for that sprint is committed to its branch only. Commits are made only when the owner has asked for them, as Section 12 requires. But always ask the owner to commit changes at the end of each sprint to give the owner the option. If the owner permits the commits, the commits of the sprint should be grouped by functionality rather than commiting all of them at once. The commits are perfomed by the owners github credentials.
+3. All work for that sprint is committed to its branch only. Commits are made only when the owner has asked for them, as Section 12 requires.
 4. The agent does not merge a sprint branch into `main`, and does not open a pull request, unless the owner asks. The owner reviews and merges.
 5. A sprint branch is not started while the previous sprint's branch is unmerged, unless the owner says so. The next sprint starts from `main` after the owner merges the previous one.
 6. If a sprint branch already exists, the agent continues on it and does not create a second one.
@@ -210,6 +210,6 @@ The agent must stop and report, rather than continue, when:
 
 This file changes only when the project owner records a change in writing. The agent may propose an amendment with its reason, but may not apply one itself.
 
-**Version:** 1.1
+**Version:** 1.2
 **Owner:** Project owner, FPL Lens
 **Effective:** On the date the owner accepts this file.
