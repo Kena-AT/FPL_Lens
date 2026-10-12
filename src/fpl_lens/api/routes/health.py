@@ -6,9 +6,9 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from src.fpl_lens.db.models import IngestionRun, PublishedProjection
-from src.fpl_lens.db.session import get_db
-from src.fpl_lens.logging import logger
+from fpl_lens.db.models import IngestionRun, PublishedProjection
+from fpl_lens.db.session import get_db
+from fpl_lens.logging import logger
 
 router = APIRouter(tags=["Health"])
 

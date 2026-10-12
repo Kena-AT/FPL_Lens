@@ -6,11 +6,12 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
-# Ensure current directory is on python path
+# Ensure src directory is on python path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.fpl_lens.config import settings
-from src.fpl_lens.db.models import Base
+from fpl_lens.config import settings
+from fpl_lens.db.models import Base
 
 config = context.config
 

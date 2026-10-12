@@ -4,7 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from src.fpl_lens.logging import logger, request_id_ctx
+from fpl_lens.logging import logger, request_id_ctx
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):

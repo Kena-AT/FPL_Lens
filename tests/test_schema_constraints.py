@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from src.fpl_lens.db.models import ModelVersion, User
+from fpl_lens.db.models import ModelVersion, User
 
 
 def test_unique_fpl_team_id_constraint(db_session: Session):

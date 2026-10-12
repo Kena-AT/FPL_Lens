@@ -20,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
-from src.fpl_lens.db.session import Base
+from fpl_lens.db.session import Base
 
 # Player position enum
 PlayerPositionEnum = Enum("GK", "DEF", "MID", "FWD", name="player_position")

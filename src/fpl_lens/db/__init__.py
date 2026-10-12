@@ -1,4 +1,4 @@
-from src.fpl_lens.db.models import (
+from fpl_lens.db.models import (
     AuditEvent,
     AuthIdentity,
     CacheEntry,
@@ -18,7 +18,7 @@ from src.fpl_lens.db.models import (
     Team,
     User,
 )
-from src.fpl_lens.db.session import Base, SessionLocal, engine, get_db
+from fpl_lens.db.session import Base, SessionLocal, engine, get_db
 
 __all__ = [
     "Base",

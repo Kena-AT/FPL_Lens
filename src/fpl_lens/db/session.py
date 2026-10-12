@@ -3,7 +3,7 @@ from collections.abc import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-from src.fpl_lens.config import settings
+from fpl_lens.config import settings
 
 # Create engine using effective database URL (pooled endpoint by default)
 db_url = settings.get_effective_database_url(pooled=True)

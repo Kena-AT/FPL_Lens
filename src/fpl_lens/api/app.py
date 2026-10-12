@@ -2,15 +2,15 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from src.fpl_lens.api.errors import (
+from fpl_lens.api.errors import (
     AppError,
     app_error_handler,
     http_exception_handler,
     unhandled_exception_handler,
     validation_exception_handler,
 )
-from src.fpl_lens.api.middleware import RequestIdMiddleware
-from src.fpl_lens.api.routes.health import router as health_router
+from fpl_lens.api.middleware import RequestIdMiddleware
+from fpl_lens.api.routes.health import router as health_router
 
 
 def create_app() -> FastAPI:

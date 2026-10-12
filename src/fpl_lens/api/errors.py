@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from src.fpl_lens.logging import logger, request_id_ctx
+from fpl_lens.logging import logger, request_id_ctx
 
 
 class AppError(Exception):

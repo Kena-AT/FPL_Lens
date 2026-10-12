@@ -2,7 +2,7 @@ import io
 import json
 import logging
 
-from src.fpl_lens.logging import JsonFormatter, RedactionFilter, redact_text
+from fpl_lens.logging import JsonFormatter, RedactionFilter, redact_text
 
 
 def test_redact_text_primitives():
