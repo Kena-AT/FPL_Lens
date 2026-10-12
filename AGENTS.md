@@ -156,6 +156,16 @@ Do not disable any of these to make a test pass.
 
 ---
 
+### Sprint branches
+
+1. Each sprint the agent is responsible for, starting with Sprint 1, is worked on its own branch.
+2. Before the first task of a sprint, the agent creates the branch from the current `main`, named `sprint-<number>-<short-name>` (for example `sprint-1-environment-setup`). It is created and checked out before any file is changed.
+3. All work for that sprint is committed to its branch only. Commits are made only when the owner has asked for them, as Section 12 requires. But always ask the owner to commit changes at the end of each sprint to give the owner the option. If the owner permits the commits, the commits of the sprint should be grouped by functionality rather than commiting all of them at once. The commits are perfomed by the owners github credentials.
+4. The agent does not merge a sprint branch into `main`, and does not open a pull request, unless the owner asks. The owner reviews and merges.
+5. A sprint branch is not started while the previous sprint's branch is unmerged, unless the owner says so. The next sprint starts from `main` after the owner merges the previous one.
+6. If a sprint branch already exists, the agent continues on it and does not create a second one.
+7. Work for one sprint is never done on another sprint's branch, and tasks from later sprints are not added to a sprint branch.
+
 ## 13. Destructive and Irreversible Actions
 
 Stop and ask the owner before doing any of the following, even if the request seems to allow it:
@@ -200,6 +210,6 @@ The agent must stop and report, rather than continue, when:
 
 This file changes only when the project owner records a change in writing. The agent may propose an amendment with its reason, but may not apply one itself.
 
-**Version:** 1.0
+**Version:** 1.1
 **Owner:** Project owner, FPL Lens
 **Effective:** On the date the owner accepts this file.
