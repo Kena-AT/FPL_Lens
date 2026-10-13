@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     # Auth & Tokens
     JWT_SIGNING_KEY: str | None = Field(default=None, validation_alias="JWT_SIGNING_KEY")
     JWT_SIGNING_KEY_REF: str | None = Field(default=None, validation_alias="JWT_SIGNING_KEY_REF")
+    JWT_PREVIOUS_KEY: str | None = Field(default=None, validation_alias="JWT_PREVIOUS_KEY")
+    JWT_PREVIOUS_KEY_REF: str | None = Field(default=None, validation_alias="JWT_PREVIOUS_KEY_REF")
     JWT_ISSUER: str = Field(default="fpl-lens-api", validation_alias="JWT_ISSUER")
     JWT_AUDIENCE: str = Field(default="fpl-lens-client", validation_alias="JWT_AUDIENCE")
     ACCESS_TOKEN_TTL_SECONDS: int = Field(default=900, validation_alias="ACCESS_TOKEN_TTL_SECONDS")
@@ -145,6 +147,20 @@ class Settings(BaseSettings):
             if resolved:
                 return resolved
         return self.JOB_TOKEN
+
+    def get_effective_jwt_signing_key(self) -> str:
+        if self.JWT_SIGNING_KEY_REF:
+            resolved = resolve_secret_ref(self.JWT_SIGNING_KEY_REF)
+            if resolved:
+                return resolved
+        return self.JWT_SIGNING_KEY or "dev-secret-signing-key-fpl-lens-32-chars-long"
+
+    def get_effective_jwt_previous_key(self) -> str | None:
+        if self.JWT_PREVIOUS_KEY_REF:
+            resolved = resolve_secret_ref(self.JWT_PREVIOUS_KEY_REF)
+            if resolved:
+                return resolved
+        return self.JWT_PREVIOUS_KEY
 
     def get_effective_smtp_password(self) -> str | None:
         if self.SMTP_PASSWORD_REF:
