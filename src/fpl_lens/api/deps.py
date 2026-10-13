@@ -109,3 +109,7 @@ def get_verified_user(
             status_code=status.HTTP_403_FORBIDDEN,
         )
     return user
+
+
+get_current_active_user = get_verified_user
+

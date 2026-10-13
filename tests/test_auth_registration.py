@@ -1,6 +1,6 @@
 import secrets
 import uuid
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -22,7 +22,10 @@ def test_registration_and_unverified_restrictions(client: TestClient, db_session
         "fpl_team_id": base_team,
     }
 
-    with patch("fpl_lens.services.mailer._send_smtp_message"):
+    with (
+        patch("fpl_lens.services.mailer._send_smtp_message"),
+        patch("fpl_lens.api.routes.auth.check_fpl_team_exists", new_callable=AsyncMock, return_value=True),
+    ):
         resp = client.post("/api/v1/auth/register", json=reg_payload)
         assert resp.status_code == 201
         assert "Registration successful" in resp.json()["message"]
@@ -34,7 +37,10 @@ def test_registration_and_unverified_restrictions(client: TestClient, db_session
     assert user.email_verified_at is None
 
     # 2. Test user enumeration limit: re-registering same email returns identical response
-    with patch("fpl_lens.services.mailer._send_smtp_message"):
+    with (
+        patch("fpl_lens.services.mailer._send_smtp_message"),
+        patch("fpl_lens.api.routes.auth.check_fpl_team_exists", new_callable=AsyncMock, return_value=True),
+    ):
         dup_email_payload = {
             "email": email,
             "password": "AnotherPassword1234!",

@@ -60,6 +60,26 @@ class Settings(BaseSettings):
         default="FPLLens/0.1 (+https://github.com/Kena-AT/FPL_Lens)",
         validation_alias="FPL_USER_AGENT",
     )
+    FPL_GLOBAL_THROTTLE_RPS: float = Field(
+        default=3.0,
+        validation_alias="FPL_GLOBAL_THROTTLE_RPS",
+    )
+    FPL_BOOTSTRAP_THROTTLE_SECONDS: int = Field(
+        default=600,
+        validation_alias="FPL_BOOTSTRAP_THROTTLE_SECONDS",
+    )
+    FPL_HISTORY_THROTTLE_RPS: float = Field(
+        default=5.0,
+        validation_alias="FPL_HISTORY_THROTTLE_RPS",
+    )
+    FPL_CACHE_TTL_SECONDS: int = Field(
+        default=600,
+        validation_alias="FPL_CACHE_TTL_SECONDS",
+    )
+    FPL_ENTRY_CACHE_TTL_SECONDS: int = Field(
+        default=3600,
+        validation_alias="FPL_ENTRY_CACHE_TTL_SECONDS",
+    )
 
     # Auth & Tokens
     JWT_SIGNING_KEY: str | None = Field(default=None, validation_alias="JWT_SIGNING_KEY")
@@ -141,12 +161,12 @@ class Settings(BaseSettings):
 
         return raw_url
 
-    def get_effective_job_token(self) -> str | None:
+    def get_effective_job_token(self) -> str:
         if self.JOB_TOKEN_REF:
             resolved = resolve_secret_ref(self.JOB_TOKEN_REF)
             if resolved:
                 return resolved
-        return self.JOB_TOKEN
+        return self.JOB_TOKEN or "dev-job-token-fpl-lens-default-64-bytes"
 
     def get_effective_jwt_signing_key(self) -> str:
         if self.JWT_SIGNING_KEY_REF:
