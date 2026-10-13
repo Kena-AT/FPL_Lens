@@ -58,9 +58,10 @@ def test_registration_and_unverified_restrictions(client: TestClient, db_session
         "display_name": "Different Name",
         "fpl_team_id": base_team,
     }
-    dup_team_resp = client.post("/api/v1/auth/register", json=dup_team_payload)
-    assert dup_team_resp.status_code == 409
-    assert dup_team_resp.json()["error"]["code"] == "FPL_TEAM_ALREADY_REGISTERED"
+    with patch("fpl_lens.api.routes.auth.check_fpl_team_exists", new_callable=AsyncMock, return_value=True):
+        dup_team_resp = client.post("/api/v1/auth/register", json=dup_team_payload)
+        assert dup_team_resp.status_code == 409
+        assert dup_team_resp.json()["error"]["code"] == "FPL_TEAM_ALREADY_REGISTERED"
 
     # 4. Generate token for unverified user and verify they cannot reach /api/v1/me
     unverified_token = create_access_token(user)

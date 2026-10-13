@@ -31,11 +31,28 @@ class FPLRateLimiter:
         self.last_request_time = 0.0
         self.clock = clock or time.monotonic
         self.sleep_fn = sleep_fn or asyncio.sleep
-        self._lock = asyncio.Lock()
+        self._lock: asyncio.Lock | None = None
+        self._lock_loop: asyncio.AbstractEventLoop | None = None
+
+    @property
+    def lock(self) -> asyncio.Lock:
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if (
+            self._lock is None
+            or (self._lock_loop is not None and self._lock_loop.is_closed())
+            or (current_loop is not None and self._lock_loop != current_loop)
+        ):
+            self._lock = asyncio.Lock()
+            self._lock_loop = current_loop
+        return self._lock
 
     async def acquire(self) -> float:
         """Waits if needed to satisfy rate limit. Returns elapsed time slept."""
-        async with self._lock:
+        async with self.lock:
             now = self.clock()
             elapsed = now - self.last_request_time
             slept = 0.0
@@ -75,16 +92,51 @@ class FPLClient:
         self.bootstrap_throttle_seconds = settings.FPL_BOOTSTRAP_THROTTLE_SECONDS
         self.last_bootstrap_time: float | None = None
         self._client: httpx.AsyncClient | None = None
-        self._lock = asyncio.Lock()
+        self._client_loop: asyncio.AbstractEventLoop | None = None
+        self._lock: asyncio.Lock | None = None
+        self._lock_loop: asyncio.AbstractEventLoop | None = None
+
+    @property
+    def lock(self) -> asyncio.Lock:
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if (
+            self._lock is None
+            or (self._lock_loop is not None and self._lock_loop.is_closed())
+            or (current_loop is not None and self._lock_loop != current_loop)
+        ):
+            self._lock = asyncio.Lock()
+            self._lock_loop = current_loop
+        return self._lock
 
     def _get_client(self) -> httpx.AsyncClient:
-        if self._client is None or self._client.is_closed:
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if (
+            self._client is None
+            or self._client.is_closed
+            or (self._client_loop is not None and self._client_loop.is_closed())
+            or (current_loop is not None and self._client_loop != current_loop)
+        ):
             self._client = httpx.AsyncClient(timeout=self.timeout)
+            self._client_loop = current_loop
         return self._client
 
     async def close(self) -> None:
-        if self._client and not self._client.is_closed:
-            await self._client.aclose()
+        if self._client is not None:
+            if not self._client.is_closed:
+                try:
+                    await self._client.aclose()
+                except (RuntimeError, httpx.HTTPError):
+                    pass
+            self._client = None
+            self._client_loop = None
 
     async def _request(self, method: str, endpoint: str, **kwargs) -> httpx.Response:
         await self.rate_limiter.acquire()
@@ -178,7 +230,7 @@ class FPLClient:
         Fetches /api/bootstrap-static/.
         Enforces 10-minute throttle unless enforce_throttle=False.
         """
-        async with self._lock:
+        async with self.lock:
             now = self.clock()
             if enforce_throttle and self.last_bootstrap_time is not None:
                 elapsed = now - self.last_bootstrap_time

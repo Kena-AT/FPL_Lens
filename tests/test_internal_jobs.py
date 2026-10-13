@@ -46,7 +46,7 @@ def test_internal_job_token_authentication_401(client: TestClient):
     assert resp_invalid_job.json()["error"]["code"] == "NOT_FOUND"
 
 
-def test_full_bootstrap_and_fixtures_run(client: TestClient, db_session: Session):
+async def test_full_bootstrap_and_fixtures_run(db_session: Session):
     """
     Spec & Implementation Plan requirement:
     A full bootstrap run followed by a fixtures run completes on the development branch,
@@ -60,8 +60,7 @@ def test_full_bootstrap_and_fixtures_run(client: TestClient, db_session: Session
         fixtures_data = json.load(f)
 
     # 1. Run bootstrap job directly via ingestion service
-    import asyncio
-    boot_res = asyncio.run(run_bootstrap_job(db_session, bootstrap_data=bootstrap_data))
+    boot_res = await run_bootstrap_job(db_session, bootstrap_data=bootstrap_data)
     assert boot_res["status"] == "OK"
     assert boot_res["rows_written"] > 600
 
@@ -82,7 +81,7 @@ def test_full_bootstrap_and_fixtures_run(client: TestClient, db_session: Session
     assert boot_run.status == "OK"
 
     # 2. Run fixtures job
-    fix_res = asyncio.run(run_fixtures_job(db_session, fixtures_data=fixtures_data))
+    fix_res = await run_fixtures_job(db_session, fixtures_data=fixtures_data)
     assert fix_res["status"] == "OK"
     assert fix_res["rows_written"] == 380
 
@@ -95,13 +94,12 @@ def test_full_bootstrap_and_fixtures_run(client: TestClient, db_session: Session
     assert fix_run.status == "OK"
 
 
-def test_history_run_and_partial_failure(db_session: Session):
+async def test_history_run_and_partial_failure(db_session: Session):
     """
     Spec & Implementation Plan requirement:
     A history run completes within the throttle budget, with a PARTIAL status
     only where records genuinely failed (e.g. unparseable numeric strings).
     """
-    import asyncio
     from datetime import UTC, datetime
 
     # Ensure at least one team, gameweek, fixture and player exist
@@ -169,12 +167,10 @@ def test_history_run_and_partial_failure(db_session: Session):
         ]
     }
 
-    res_ok = asyncio.run(
-        run_history_job(
-            db_session,
-            player_ids=[9999],
-            mock_history_map={9999: valid_summary},
-        )
+    res_ok = await run_history_job(
+        db_session,
+        player_ids=[9999],
+        mock_history_map={9999: valid_summary},
     )
     assert res_ok["status"] == "OK"
     assert res_ok["rows_written"] == 1
@@ -215,12 +211,10 @@ def test_history_run_and_partial_failure(db_session: Session):
         ]
     }
 
-    res_partial = asyncio.run(
-        run_history_job(
-            db_session,
-            player_ids=[9999],
-            mock_history_map={9999: invalid_summary},
-        )
+    res_partial = await run_history_job(
+        db_session,
+        player_ids=[9999],
+        mock_history_map={9999: invalid_summary},
     )
     assert res_partial["status"] == "PARTIAL"
     assert res_partial["failed_records"] == 1
@@ -231,10 +225,8 @@ def test_history_run_and_partial_failure(db_session: Session):
     assert "1 history records failed validation" in run_row.error_summary
 
 
-def test_cleanup_job_run(db_session: Session):
+async def test_cleanup_job_run(db_session: Session):
     """Verifies that the cleanup job runs and records an ingestion_runs entry."""
-    import asyncio
-
-    res = asyncio.run(run_cleanup_job(db_session))
+    res = await run_cleanup_job(db_session)
     assert res["status"] == "OK"
     assert "stats" in res
