@@ -1,8 +1,5 @@
 from typing import Any
 
-from google.auth.transport import requests
-from google.oauth2 import id_token
-
 from fpl_lens.config import settings
 from fpl_lens.logging import logger
 
@@ -13,6 +10,9 @@ def verify_google_id_token(token: str) -> dict[str, Any]:
     Rejects tokens with mismatched audience or expired timestamps.
     Returns the token claims dict with 'sub', 'email', etc.
     """
+    from google.auth.transport import requests
+    from google.oauth2 import id_token
+
     request = requests.Request()
 
     # Audiences to accept: Android client ID and/or Web client ID
