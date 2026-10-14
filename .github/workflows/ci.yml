@@ -46,7 +46,14 @@ jobs:
 
       - name: Run type checker (Mypy)
         run: |
-          python -m mypy src
+          python -m mypy src > mypy_out.txt 2>&1 || {
+            echo "### Mypy Failure Output" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat mypy_out.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat mypy_out.txt
+            exit 1
+          }
 
 
       - name: Run Alembic migrations
