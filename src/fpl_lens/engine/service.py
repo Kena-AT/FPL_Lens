@@ -14,17 +14,20 @@ from sqlalchemy.orm import Session
 from fpl_lens.db.models import (
     Fixture,
     Gameweek,
+    IngestionRun,
     ModelVersion,
     Player,
     PlayerFixtureStat,
     PlayerProjection,
     ProjectionRun,
+    PublishedProjection,
     Team,
 )
 from fpl_lens.engine.intensities import compute_league_averages
 from fpl_lens.engine.projection import run_projection_cycle
 from fpl_lens.engine.types import (
     FixtureContext,
+    FixtureProjection,
     PlayerFeatures,
     PlayerMatchHistory,
     TeamStrength,
@@ -234,6 +237,19 @@ def run_projections_for_gameweek(
             target_gameweek,
             existing_run.id,
         )
+        # Ensure published_projections is populated even on reused run
+        existing_pub = db.query(PublishedProjection).filter(PublishedProjection.gameweek == target_gameweek).first()
+        if not existing_pub:
+            _publish_bundle(
+                db=db,
+                gameweek=target_gameweek,
+                run_id=cast(uuid.UUID, existing_run.id),
+                model_version=model_version,
+                input_hash=input_hash,
+                inputs_as_of=cast(datetime, as_of),
+                projections=projections,
+            )
+
         return {
             "status": "OK",
             "run_id": str(existing_run.id),
@@ -291,8 +307,19 @@ def run_projections_for_gameweek(
         )
         db.execute(stmt)
 
+    # 11. Publish bundle to published_projections
+    _publish_bundle(
+        db=db,
+        gameweek=target_gameweek,
+        run_id=run_id,
+        model_version=model_version,
+        input_hash=input_hash,
+        inputs_as_of=cast(datetime, as_of),
+        projections=projections,
+    )
+
     db.commit()
-    logger.info("Projection run %s committed with %d projections", run_id, len(projections))
+    logger.info("Projection run %s committed and published with %d projections", run_id, len(projections))
 
     return {
         "status": "OK",
@@ -304,22 +331,112 @@ def run_projections_for_gameweek(
     }
 
 
-def run_projection_job(db: Session, gameweek: int | None = None) -> dict:
-    """Entry point for the /internal/jobs/project trigger."""
-    if gameweek is None:
-        # Determine next or current gameweek
-        gw = (
-            db.query(Gameweek)
-            .filter(Gameweek.finished.is_(False))
-            .order_by(Gameweek.id.asc())
-            .first()
-        )
-        if not gw:
-            gw = db.query(Gameweek).order_by(Gameweek.id.desc()).first()
-        if not gw or gw.id is None:
-            return {"status": "FAILED", "error": "No gameweek found"}
-        target_gw = int(gw.id)
-    else:
-        target_gw = gameweek
+def _publish_bundle(
+    db: Session,
+    gameweek: int,
+    run_id: uuid.UUID,
+    model_version: str,
+    input_hash: bytes,
+    inputs_as_of: datetime,
+    projections: list[FixtureProjection],
+) -> None:
+    """Generates the JSON document bundle and persists to published_projections table."""
+    players_dict: dict[int, list[dict[str, Any]]] = {}
+    for p in projections:
+        players_dict.setdefault(p.player_fpl_id, []).append({
+            "fixture_fpl_id": p.fixture_fpl_id,
+            "expected_points": round(float(p.components.expected_points), 2),
+            "availability": round(float(p.availability), 2),
+            "p_start": round(float(p.p_start), 2),
+            "p_sub": round(float(p.p_sub), 2),
+            "p_60_plus_given_start": round(float(p.p_60_plus_given_start), 2),
+            "expected_minutes": round(float(p.expected_minutes), 1),
+            "exp_goals": round(float(p.components.exp_goals), 3),
+            "exp_assists": round(float(p.components.exp_assists), 3),
+            "exp_appearance": round(float(p.components.exp_appearance), 3),
+            "exp_clean_sheet": round(float(p.components.exp_clean_sheet), 3),
+            "exp_goals_conceded": round(float(p.components.exp_goals_conceded), 3),
+            "exp_dc": round(float(p.components.exp_dc), 3),
+            "exp_bonus": round(float(p.components.exp_bonus), 3),
+            "exp_card_penalty": round(float(p.components.exp_card_penalty), 3),
+        })
 
-    return run_projections_for_gameweek(db, target_gameweek=target_gw)
+    players_list = [
+        {"fpl_id": fpl_id, "fixtures": fixtures}
+        for fpl_id, fixtures in sorted(players_dict.items())
+    ]
+
+    bundle = {
+        "gameweek": gameweek,
+        "model_version": model_version,
+        "input_hash": input_hash.hex(),
+        "inputs_as_of": inputs_as_of.isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
+        "players": players_list,
+    }
+
+    pub_stmt = pg_insert(PublishedProjection).values({
+        "gameweek": gameweek,
+        "run_id": run_id,
+        "published_at": datetime.now(UTC),
+        "bundle_json": bundle,
+    })
+    pub_stmt = pub_stmt.on_conflict_do_update(
+        index_elements=["gameweek"],
+        set_={
+            "run_id": pub_stmt.excluded.run_id,
+            "published_at": pub_stmt.excluded.published_at,
+            "bundle_json": pub_stmt.excluded.bundle_json,
+        },
+    )
+    db.execute(pub_stmt)
+
+
+def run_projection_job(db: Session, gameweek: int | None = None) -> dict[str, Any]:
+    """
+    Entry point for the /internal/jobs/project trigger.
+    Tracks execution in ingestion_runs table.
+    """
+    started_at = datetime.now(UTC)
+    run_log = IngestionRun(
+        job_name="project",
+        started_at=started_at,
+        status="RUNNING",
+    )
+    db.add(run_log)
+    db.commit()
+
+    try:
+        if gameweek is None:
+            # Determine next or current gameweek
+            gw = (
+                db.query(Gameweek)
+                .filter(Gameweek.finished.is_(False))
+                .order_by(Gameweek.id.asc())
+                .first()
+            )
+            if not gw:
+                gw = db.query(Gameweek).order_by(Gameweek.id.desc()).first()
+            if not gw or gw.id is None:
+                run_log.status = "FAILED"  # type: ignore[assignment]
+                run_log.finished_at = datetime.now(UTC)  # type: ignore[assignment]
+                run_log.error_summary = "No gameweek found"  # type: ignore[assignment]
+                db.commit()
+                return {"status": "FAILED", "error": "No gameweek found"}
+            target_gw = int(gw.id)
+        else:
+            target_gw = gameweek
+
+        res = run_projections_for_gameweek(db, target_gameweek=target_gw)
+        run_log.status = "OK"  # type: ignore[assignment]
+        run_log.finished_at = datetime.now(UTC)  # type: ignore[assignment]
+        run_log.rows_written = res.get("projections_count", 0)  # type: ignore[assignment]
+        db.commit()
+        return res
+    except Exception as exc:
+        db.rollback()
+        run_log.status = "FAILED"  # type: ignore[assignment]
+        run_log.finished_at = datetime.now(UTC)  # type: ignore[assignment]
+        run_log.error_summary = str(exc)  # type: ignore[assignment]
+        db.commit()
+        raise

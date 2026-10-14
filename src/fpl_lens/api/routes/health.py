@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, status
@@ -6,7 +7,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from fpl_lens.db.models import IngestionRun, PublishedProjection
+from fpl_lens.db.models import Gameweek, IngestionRun, PublishedProjection
 from fpl_lens.db.session import get_db
 from fpl_lens.logging import logger
 
@@ -42,11 +43,20 @@ def health_check(db: Session = Depends(get_db)) -> JSONResponse:
         if last_proj:
             last_projection_at = last_proj.isoformat()
 
+        # Freshness monitor: alert when last successful ingestion is older than 60 minutes during active gameweek
+        now = datetime.now(UTC)
+        is_stale = False
+        current_gw = db.query(Gameweek).filter(Gameweek.is_current.is_(True)).first()
+        if current_gw and current_gw.deadline_time and current_gw.deadline_time <= now and not current_gw.finished:
+            if last_ingestion is None or (now - last_ingestion).total_seconds() > 3600:
+                is_stale = True
+
         payload: dict[str, Any] = {
-            "status": "ok",
+            "status": "degraded" if is_stale else "ok",
             "database": db_status,
             "last_ingestion_at": last_ingestion_at,
             "last_projection_at": last_projection_at,
+            "ingestion_freshness": "stale" if is_stale else "fresh",
         }
         return JSONResponse(status_code=status.HTTP_200_OK, content=payload)
 

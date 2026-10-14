@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.gzip import GZipMiddleware
 
 from fpl_lens.api.errors import (
     AppError,
@@ -15,6 +16,7 @@ from fpl_lens.api.routes.fpl_proxy import router as fpl_proxy_router
 from fpl_lens.api.routes.health import router as health_router
 from fpl_lens.api.routes.internal_jobs import router as internal_jobs_router
 from fpl_lens.api.routes.me import router as me_router
+from fpl_lens.api.routes.projections import router as projections_router
 
 
 def create_app() -> FastAPI:
@@ -28,6 +30,8 @@ def create_app() -> FastAPI:
 
     # Register middleware
     app.add_middleware(RequestIdMiddleware)
+    # Enable GZip compression per Backend Design §7.2
+    app.add_middleware(GZipMiddleware, minimum_size=500)
 
     # Register exception handlers
     app.add_exception_handler(AppError, app_error_handler)
@@ -37,9 +41,11 @@ def create_app() -> FastAPI:
 
     # Register routers
     app.include_router(health_router)
+    app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(me_router, prefix="/api/v1")
     app.include_router(fpl_proxy_router, prefix="/api/v1")
+    app.include_router(projections_router, prefix="/api/v1")
     app.include_router(internal_jobs_router)
     app.include_router(internal_jobs_router, prefix="/api/v1")
 
