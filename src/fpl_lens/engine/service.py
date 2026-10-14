@@ -5,8 +5,9 @@ Enforces the freeze rule, input hashing, and writes to projection_runs and playe
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any, cast
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -101,10 +102,10 @@ def run_projections_for_gameweek(
     }
 
     # 4. Load finished matches prior to deadline to compute league average mu
-    finished_query = select(
+    finished_query: Any = select(
         func.count(PlayerFixtureStat.fixture_fpl_id.distinct()),
         func.sum(PlayerFixtureStat.goals_scored),
-    ).where(PlayerFixtureStat.source_fetched_at <= as_of)
+    ).where(cast(ColumnElement[bool], PlayerFixtureStat.source_fetched_at <= as_of))
     matches_count, total_goals = db.execute(finished_query).first() or (0, 0)
     matches_count = matches_count or 0
     total_goals = total_goals or 0
@@ -129,7 +130,7 @@ def run_projections_for_gameweek(
                 team_fpl_id=int(f.home_team_fpl_id),
                 opponent_fpl_id=int(f.away_team_fpl_id),
                 is_home=True,
-                kickoff_time=f.kickoff_time,
+                kickoff_time=cast(datetime | None, f.kickoff_time),
             )
         )
         # Away fixture context
@@ -140,7 +141,7 @@ def run_projections_for_gameweek(
                 team_fpl_id=int(f.away_team_fpl_id),
                 opponent_fpl_id=int(f.home_team_fpl_id),
                 is_home=False,
-                kickoff_time=f.kickoff_time,
+                kickoff_time=cast(datetime | None, f.kickoff_time),
             )
         )
 
@@ -173,7 +174,7 @@ def run_projections_for_gameweek(
                 bonus=int(st.bonus or 0),
                 yellow_cards=int(st.yellow_cards or 0),
                 red_cards=int(st.red_cards or 0),
-                source_fetched_at=st.source_fetched_at,
+                source_fetched_at=cast(datetime | None, st.source_fetched_at),
             )
         )
 

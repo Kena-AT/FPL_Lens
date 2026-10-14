@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
@@ -94,7 +96,7 @@ async def get_team_squad(
     target_gw = gw
     if target_gw is None:
         # Resolve current gameweek from DB
-        stmt = select(Gameweek.id).where(Gameweek.is_current.is_(True)).limit(1)
+        stmt: Any = select(Gameweek.id).where(Gameweek.is_current.is_(True)).limit(1)
         current_gw_id = db.execute(stmt).scalar_one_or_none()
         target_gw = current_gw_id if current_gw_id is not None else 1
 

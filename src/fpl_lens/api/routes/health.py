@@ -28,7 +28,7 @@ def health_check(db: Session = Depends(get_db)) -> JSONResponse:
         db.execute(text("SELECT 1;")).scalar()
 
         # Query last successful ingestion timestamp
-        ingestion_stmt = (
+        ingestion_stmt: Any = (
             select(func.max(IngestionRun.finished_at))
             .where(IngestionRun.status == "OK")
         )
@@ -37,7 +37,7 @@ def health_check(db: Session = Depends(get_db)) -> JSONResponse:
             last_ingestion_at = last_ingestion.isoformat()
 
         # Query last published projection timestamp
-        proj_stmt = select(func.max(PublishedProjection.published_at))
+        proj_stmt: Any = select(func.max(PublishedProjection.published_at))
         last_proj = db.execute(proj_stmt).scalar()
         if last_proj:
             last_projection_at = last_proj.isoformat()

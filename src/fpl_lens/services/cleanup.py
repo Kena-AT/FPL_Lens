@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
-from sqlalchemy import delete
+from sqlalchemy import ColumnElement, delete
 from sqlalchemy.orm import Session
 
 from fpl_lens.db.models import User
@@ -20,22 +21,22 @@ def cleanup_expired_accounts(db: Session, grace_days: int = 3) -> dict[str, int]
         delete(User)
         .where(
             User.status == "unverified",
-            User.created_at <= cutoff,
+            cast(ColumnElement[bool], User.created_at <= cutoff),
         )
     )
-    res_unverified = db.execute(unverified_stmt)
-    unverified_deleted = res_unverified.rowcount
+    res_unverified: Any = db.execute(unverified_stmt)
+    unverified_deleted: int = getattr(res_unverified, "rowcount", 0)
 
     # 2. Accounts pending deletion requested > 3 days ago
     pending_stmt = (
         delete(User)
         .where(
             User.status == "pending_deletion",
-            User.deletion_requested_at <= cutoff,
+            cast(ColumnElement[bool], User.deletion_requested_at <= cutoff),
         )
     )
-    res_pending = db.execute(pending_stmt)
-    pending_deleted = res_pending.rowcount
+    res_pending: Any = db.execute(pending_stmt)
+    pending_deleted: int = getattr(res_pending, "rowcount", 0)
 
     db.commit()
 
