@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md ./
+COPY src ./src
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .
 
@@ -32,6 +33,7 @@ COPY src ./src
 USER appuser
 
 ENV PORT=8000
+ENV PYTHONPATH=/app/src
 EXPOSE 8000
 
 CMD ["sh", "-c", "uvicorn fpl_lens.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
