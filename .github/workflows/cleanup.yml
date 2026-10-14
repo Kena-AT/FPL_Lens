@@ -1,0 +1,24 @@
+name: Schedule Data Cleanup Job
+
+on:
+  schedule:
+    # Run daily at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cleanup Job
+        run: |
+          STATUS=$(curl -s -o response.json -w "%{http_code}" \
+            -X POST "${{ secrets.BACKEND_URL }}/internal/jobs/cleanup" \
+            -H "X-Job-Token: ${{ secrets.JOB_TOKEN }}" \
+            -H "Content-Type: application/json")
+          echo "HTTP Status: $STATUS"
+          cat response.json
+          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 300 ]; then
+            echo "Cleanup job failed with status $STATUS"
+            exit 1
+          fi

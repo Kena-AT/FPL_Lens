@@ -1,0 +1,24 @@
+name: Schedule Fixtures Ingestion
+
+on:
+  schedule:
+    # Run every 30 minutes (can be adjusted to */10 * * * * on deadline days)
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Fixtures Job
+        run: |
+          STATUS=$(curl -s -o response.json -w "%{http_code}" \
+            -X POST "${{ secrets.BACKEND_URL }}/internal/jobs/fixtures" \
+            -H "X-Job-Token: ${{ secrets.JOB_TOKEN }}" \
+            -H "Content-Type: application/json")
+          echo "HTTP Status: $STATUS"
+          cat response.json
+          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 300 ]; then
+            echo "Fixtures job failed with status $STATUS"
+            exit 1
+          fi

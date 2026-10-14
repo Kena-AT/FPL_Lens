@@ -3,7 +3,7 @@ from typing import Any
 
 import httpx
 from pydantic import ValidationError
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -16,7 +16,6 @@ from fpl_lens.api.schemas.fpl import (
     FPLTeamSchema,
 )
 from fpl_lens.db.models import (
-    CacheEntry,
     Fixture,
     Gameweek,
     IngestionRun,
@@ -26,7 +25,6 @@ from fpl_lens.db.models import (
 )
 from fpl_lens.logging import logger
 from fpl_lens.services.cache import set_cached_value
-from fpl_lens.services.cleanup import cleanup_expired_accounts
 from fpl_lens.services.fpl_client import UpstreamUnavailableError, fpl_client
 
 POSITION_MAP = {
@@ -143,6 +141,11 @@ async def run_bootstrap_job(db: Session, bootstrap_data: dict[str, Any] | None =
                 errors.append(msg)
 
         if event_values:
+            has_current = any(v.get("is_current") for v in event_values)
+            if has_current:
+                db.query(Gameweek).filter(Gameweek.is_current.is_(True)).update({"is_current": False})
+                db.flush()
+
             stmt = insert(Gameweek).values(event_values)
             stmt = stmt.on_conflict_do_update(
                 index_elements=["id"],
@@ -228,6 +231,14 @@ async def run_bootstrap_job(db: Session, bootstrap_data: dict[str, Any] | None =
         status_result = "PARTIAL" if failed_records > 0 else "OK"
         summary = f"{failed_records} records failed validation" if failed_records > 0 else None
         _finish_ingestion_run(db, run, status_result, total_written, summary)
+
+        # Trigger projection job if data was written per Sprint 6
+        if total_written > 0:
+            try:
+                from fpl_lens.engine.service import run_projection_job
+                run_projection_job(db)
+            except Exception as e:  # noqa: BLE001
+                logger.error("Projection job triggered after bootstrap failed: %s", e)
 
         return {
             "run_id": run.id,
@@ -410,6 +421,14 @@ async def run_history_job(
         summary = f"{failed_records} history records failed validation" if failed_records > 0 else None
         _finish_ingestion_run(db, run, status_result, total_written, summary)
 
+        # Trigger projection job if data was written per Sprint 6
+        if total_written > 0:
+            try:
+                from fpl_lens.engine.service import run_projection_job
+                run_projection_job(db)
+            except Exception as e:  # noqa: BLE001
+                logger.error("Projection job triggered after history failed: %s", e)
+
         return {
             "run_id": run.id,
             "job": "history",
@@ -429,19 +448,12 @@ async def run_cleanup_job(db: Session) -> dict[str, Any]:
     """
     Cleans up expired accounts, tokens, email codes, and expired cache entries.
     """
+    from fpl_lens.services.cleanup import run_full_cleanup
+
     run = _create_ingestion_run(db, "cleanup")
     try:
-        # Accounts and tokens cleanup
-        acct_stats = cleanup_expired_accounts(db)
-
-        # Cache cleanup
-        now = datetime.now(UTC)
-        cache_del_stmt = delete(CacheEntry).where(CacheEntry.expires_at <= now)
-        res = db.execute(cache_del_stmt)
-        cache_deleted = res.rowcount or 0
-        db.commit()
-
-        rows_written = acct_stats["unverified_deleted"] + acct_stats["pending_deletion_deleted"] + cache_deleted
+        stats = run_full_cleanup(db)
+        rows_written = sum(stats.values())
         _finish_ingestion_run(db, run, "OK", rows_written)
 
         return {
@@ -449,7 +461,7 @@ async def run_cleanup_job(db: Session) -> dict[str, Any]:
             "job": "cleanup",
             "status": "OK",
             "rows_written": rows_written,
-            "stats": {**acct_stats, "cache_deleted": cache_deleted},
+            "stats": stats,
         }
     except Exception as exc:
         db.rollback()
