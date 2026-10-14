@@ -54,6 +54,7 @@ ignore = ["E501", "B008"]
 
 [tool.mypy]
 python_version = "3.12"
+mypy_path = "src"
 ignore_missing_imports = true
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 

@@ -46,7 +46,7 @@ jobs:
 
       - name: Run type checker (Mypy)
         run: |
-          mypy src
+          python -m mypy src
 
 
       - name: Run Alembic migrations
