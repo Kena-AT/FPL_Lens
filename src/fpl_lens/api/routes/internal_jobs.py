@@ -77,6 +77,11 @@ async def trigger_internal_job(
         result = await run_cleanup_job(db)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
+    if name == "project":
+        from fpl_lens.engine.service import run_projection_job
+        result = run_projection_job(db)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
     raise AppError(
         code="NOT_FOUND",
         message=f"Unknown internal job '{name}'",

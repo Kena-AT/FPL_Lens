@@ -51,3 +51,21 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "BLE", "B"]
 ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+plugins = ["sqlalchemy.ext.mypy.plugin"]
+
+[[tool.mypy.overrides]]
+module = [
+    "fpl_lens.api.routes.auth",
+    "fpl_lens.api.routes.me",
+    "fpl_lens.services.token",
+    "fpl_lens.services.ingestion",
+    "fpl_lens.services.cache",
+    "fpl_lens.api.app",
+]
+ignore_errors = true
+
+

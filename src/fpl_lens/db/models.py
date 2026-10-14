@@ -142,7 +142,7 @@ class Player(Base):
     first_name = Column(String(64), nullable=False)
     second_name = Column(String(64), nullable=False)
     web_name = Column(String(64), nullable=False)
-    position = Column(PlayerPositionEnum, nullable=False)
+    position: Column[str] = Column(PlayerPositionEnum, nullable=False)
     team_fpl_id = Column(Integer, ForeignKey("teams.fpl_id"), nullable=False)
     now_cost = Column(Integer, nullable=False)  # tenths of £m
     status = Column(String(2), nullable=False)
