@@ -87,5 +87,13 @@ jobs:
         run: flutter analyze
 
       - name: Run Flutter tests
-        run: flutter test
+        run: |
+          flutter test --reporter expanded > flutter_test_out.txt 2>&1 || {
+            echo "### Flutter Test Failure Output" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat flutter_test_out.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat flutter_test_out.txt
+            exit 1
+          }
 
