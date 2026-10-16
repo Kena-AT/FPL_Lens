@@ -87,5 +87,30 @@ jobs:
         run: flutter analyze
 
       - name: Run Flutter tests
-        run: flutter test --reporter expanded
+        run: |
+          failed=0
+          for f in $(find test -name "*_test.dart"); do
+            echo "=== Running $f ==="
+            if ! flutter test --reporter expanded "$f" > "test_$(basename $f).log" 2>&1; then
+              cat "test_$(basename $f).log"
+              echo "## ❌ Failed: $f" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              cat "test_$(basename $f).log" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              failed=1
+            else
+              cat "test_$(basename $f).log"
+            fi
+          done
+          if [ $failed -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-test-logs
+          path: test_*.log
+
 
