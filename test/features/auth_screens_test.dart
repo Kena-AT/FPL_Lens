@@ -33,6 +33,13 @@ void main() {
     );
   }
 
+  void setLargeViewport(WidgetTester tester) {
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
   group('Authentication Screens', () {
     testWidgets('P1 SplashScreen displays wordmark and branding', (tester) async {
       await tester.pumpWidget(wrapWithScope(const SplashScreen()));
@@ -45,7 +52,9 @@ void main() {
     });
 
     testWidgets('P2 SignInScreen renders form fields, buttons, and verbatim disclaimer', (tester) async {
+      setLargeViewport(tester);
       await tester.pumpWidget(wrapWithScope(const SignInScreen()));
+      await tester.pumpAndSettle();
 
       expect(find.text('FPL Lens'), findsOneWidget);
       expect(find.widgetWithText(AppTextField, 'Email'), findsOneWidget);
@@ -55,6 +64,7 @@ void main() {
     });
 
     testWidgets('P2 SignInScreen shows lockout banner when locked', (tester) async {
+      setLargeViewport(tester);
       await tester.pumpWidget(
         wrapWithScope(
           const SignInScreen(),
@@ -72,12 +82,15 @@ void main() {
           ],
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('Too many attempts. Try again in 15 minutes.'), findsOneWidget);
     });
 
     testWidgets('P3 RegisterScreen renders all required fields and terms checkbox', (tester) async {
+      setLargeViewport(tester);
       await tester.pumpWidget(wrapWithScope(const RegisterScreen()));
+      await tester.pumpAndSettle();
 
       expect(find.text('Create account'), findsWidgets);
       expect(find.widgetWithText(AppTextField, 'Email'), findsOneWidget);

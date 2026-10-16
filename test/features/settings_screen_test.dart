@@ -50,6 +50,7 @@ void main() {
         );
 
       await tester.pumpWidget(wrapSettings(notifier: notifier));
+      await tester.pumpAndSettle();
 
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('ma***@example.com'), findsOneWidget);
