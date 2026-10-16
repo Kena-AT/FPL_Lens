@@ -1,4 +1,4 @@
-name: Backend CI
+name: CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test:
+  backend-test:
     runs-on: ubuntu-latest
 
     services:
@@ -67,3 +67,25 @@ jobs:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/fpl_lens_test
         run: |
           pytest -v
+
+  flutter-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze Flutter codebase
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
+

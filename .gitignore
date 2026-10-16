@@ -40,5 +40,7 @@ android/**/generated/
 # IDE & OS
 .vscode/
 .idea/
+*.iml
+.metadata
 .DS_Store
 Thumbs.db
