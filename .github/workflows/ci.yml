@@ -93,10 +93,8 @@ jobs:
             echo "=== Running $f ==="
             if ! flutter test --reporter expanded "$f" > "test_$(basename $f).log" 2>&1; then
               cat "test_$(basename $f).log"
-              echo "## ❌ Failed: $f" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              cat "test_$(basename $f).log" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
+              msg=$(tail -n 25 "test_$(basename $f).log" | tr '\n' ' ' | tr '\r' ' ')
+              echo "::error file=$f,title=Test Failed::$msg"
               failed=1
             else
               cat "test_$(basename $f).log"
