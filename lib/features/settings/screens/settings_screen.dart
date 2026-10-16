@@ -92,11 +92,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         borderRadius: BorderRadius.circular(AppTokens.radiusInput),
         border: Border.all(color: AppTokens.borderSubtle, width: 1.0),
       ),
-      child: ListTile(
-        title: Text(title, style: AppTextStyles.body.copyWith(fontSize: 14.0)),
-        subtitle: Text(value, style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary)),
-        trailing: trailing,
-        onTap: onTap,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppTokens.radiusInput),
+        child: ListTile(
+          title: Text(title, style: AppTextStyles.body.copyWith(fontSize: 14.0)),
+          subtitle: Text(value, style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary)),
+          trailing: trailing,
+          onTap: onTap,
+        ),
       ),
     );
   }
@@ -167,18 +171,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 borderRadius: BorderRadius.circular(AppTokens.radiusInput),
                 border: Border.all(color: AppTokens.borderSubtle, width: 1.0),
               ),
-              child: SwitchListTile(
-                title: Text(
-                  'Share anonymous usage data',
-                  style: AppTextStyles.body.copyWith(fontSize: 14.0),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(AppTokens.radiusInput),
+                child: SwitchListTile(
+                  title: Text(
+                    'Share anonymous usage data',
+                    style: AppTextStyles.body.copyWith(fontSize: 14.0),
+                  ),
+                  subtitle: Text(
+                    'Helps improve projection accuracy. No squad or personal data is collected.',
+                    style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+                  ),
+                  value: _shareAnalytics,
+                  activeThumbColor: AppTokens.goldPrimary,
+                  onChanged: (val) => setState(() => _shareAnalytics = val),
                 ),
-                subtitle: Text(
-                  'Helps improve projection accuracy. No squad or personal data is collected.',
-                  style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
-                ),
-                value: _shareAnalytics,
-                activeThumbColor: AppTokens.goldPrimary,
-                onChanged: (val) => setState(() => _shareAnalytics = val),
               ),
             ),
 
