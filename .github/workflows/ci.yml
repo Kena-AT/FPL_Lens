@@ -1,4 +1,4 @@
-name: Backend CI
+name: CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test:
+  backend-test:
     runs-on: ubuntu-latest
 
     services:
@@ -67,3 +67,48 @@ jobs:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/fpl_lens_test
         run: |
           pytest -v
+
+  flutter-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze Flutter codebase
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: |
+          failed=0
+          for f in $(find test -name "*_test.dart"); do
+            echo "=== Running $f ==="
+            if ! flutter test --reporter expanded "$f" > "test_$(basename $f).log" 2>&1; then
+              cat "test_$(basename $f).log"
+              msg=$(tail -n 25 "test_$(basename $f).log" | tr '\n' ' ' | tr '\r' ' ')
+              echo "::error file=$f,title=Test Failed::$msg"
+              failed=1
+            else
+              cat "test_$(basename $f).log"
+            fi
+          done
+          if [ $failed -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-test-logs
+          path: test_*.log
+
+
