@@ -6,9 +6,12 @@ import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/sign_in_screen.dart';
 import '../features/auth/screens/splash_screen.dart';
 import '../features/auth/screens/verify_email_screen.dart';
+import '../features/history/screens/history_screen.dart';
 import '../features/home/screens/home_shell_screen.dart';
+import '../features/onboarding/screens/load_squad_screen.dart';
 import '../features/onboarding/screens/team_check_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
+import '../features/squad/screens/purchase_prices_screen.dart';
 import 'guards.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -65,9 +68,42 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const TeamCheckScreen(),
       ),
       GoRoute(
+        path: '/onboarding/load',
+        name: 'loadSquad',
+        builder: (context, state) {
+          final teamId = (state.extra as int?) ?? 0;
+          return LoadSquadScreen(teamId: teamId);
+        },
+      ),
+      GoRoute(
+        path: '/squad/prices',
+        name: 'purchasePrices',
+        builder: (context, state) => const PurchasePricesScreen(),
+      ),
+      GoRoute(
         path: '/home',
         name: 'home',
-        builder: (context, state) => const HomeShellScreen(),
+        builder: (context, state) => const HomeShellScreen(initialIndex: 0),
+      ),
+      GoRoute(
+        path: '/squad',
+        name: 'squad',
+        builder: (context, state) => const HomeShellScreen(initialIndex: 1),
+      ),
+      GoRoute(
+        path: '/lineup',
+        name: 'lineup',
+        builder: (context, state) => const HomeShellScreen(initialIndex: 2),
+      ),
+      GoRoute(
+        path: '/transfers',
+        name: 'transfers',
+        builder: (context, state) => const HomeShellScreen(initialIndex: 3),
+      ),
+      GoRoute(
+        path: '/history',
+        name: 'history',
+        builder: (context, state) => const HistoryScreen(),
       ),
       GoRoute(
         path: '/settings',

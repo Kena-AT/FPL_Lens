@@ -30,10 +30,12 @@ abstract final class AppGuards {
 
     // 3. Authenticated and verified users:
     if (authState.status == AuthStatus.authenticatedVerified) {
+      final hasSquad = authState.user?.hasSquad ?? false;
       if (isAuth || isRegister || isVerify) {
-        if (authState.user?.hasSquad ?? false) {
-          return '/home';
-        }
+        return hasSquad ? '/home' : '/onboarding/team';
+      }
+      final isOnboarding = location.startsWith('/onboarding');
+      if (!hasSquad && !isOnboarding) {
         return '/onboarding/team';
       }
     }
