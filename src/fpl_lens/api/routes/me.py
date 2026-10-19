@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
-from fpl_lens.api.deps import get_client_ip, get_verified_user
+from fpl_lens.api.deps import get_client_ip, get_current_user, get_verified_user
 from fpl_lens.api.errors import AppError
 from fpl_lens.api.schemas.auth import UserProfileResponse
 from fpl_lens.db.models import User
@@ -18,9 +18,9 @@ router = APIRouter(prefix="/me", tags=["User Profile"])
 @router.get("", response_model=UserProfileResponse)
 def get_my_profile(
     response: Response,
-    current_user: User = Depends(get_verified_user),
+    current_user: User = Depends(get_current_user),
 ):
-    """Returns profile for the authenticated, verified user."""
+    """Returns profile for the authenticated user (including unverified status)."""
     response.headers["Cache-Control"] = "no-store"
     return UserProfileResponse(
         id=str(current_user.id),

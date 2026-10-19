@@ -102,16 +102,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  void resetToUnauthenticated() {
+    state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
   Future<void> checkSession() async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
     try {
-      final refreshToken = await _secureStore.getRefreshToken();
-      if (refreshToken == null) {
+      final refreshToken = await _secureStore.getRefreshToken().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => null,
+      );
+      if (refreshToken == null || refreshToken.isEmpty) {
         state = const AuthState(status: AuthStatus.unauthenticated);
         return;
       }
 
-      final user = await _repository.getProfile();
+      final user = await _repository.getProfile().timeout(
+        const Duration(seconds: 3),
+      );
       if (!user.isEmailVerified) {
         state = AuthState(status: AuthStatus.authenticatedUnverified, user: user);
       } else {

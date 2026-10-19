@@ -30,6 +30,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.addListener(() => setState(() {}));
     _passwordController.addListener(() => setState(() {}));
     _displayNameController.addListener(() => setState(() {}));
+    _teamIdController.addListener(() => setState(() {}));
   }
 
   @override
@@ -45,23 +46,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final displayName = _displayNameController.text.trim();
+    final parsedTeamId = _resolvedTeamId ?? int.tryParse(_teamIdController.text.trim());
 
     final emailValid = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
-    final passwordValid = password.length >= 12;
+    final passwordValid = password.length >= 8;
     final nameValid = displayName.length >= 2 && displayName.length <= 32;
-    final teamIdValid = _resolvedTeamId != null && _resolvedTeamId! > 0;
+    final teamIdValid = parsedTeamId != null && parsedTeamId > 0;
 
     return emailValid && passwordValid && nameValid && teamIdValid && _termsAccepted;
   }
 
   Future<void> _handleRegister() async {
-    if (!_isFormValid || _resolvedTeamId == null) return;
+    final teamId = _resolvedTeamId ?? int.tryParse(_teamIdController.text.trim());
+    if (!_isFormValid || teamId == null) return;
 
     final success = await ref.read(authNotifierProvider.notifier).register(
           email: _emailController.text.trim(),
           password: _passwordController.text,
           displayName: _displayNameController.text.trim(),
-          fplTeamId: _resolvedTeamId!,
+          fplTeamId: teamId,
         );
 
     if (success && mounted) {
@@ -111,7 +114,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 label: 'Password',
                 controller: _passwordController,
                 type: AppTextFieldType.password,
-                helper: 'At least 12 characters.',
+                helper: _passwordController.text.isEmpty
+                    ? 'At least 8 characters.'
+                    : (_passwordController.text.length < 8
+                        ? '${_passwordController.text.length}/8 characters (at least 8 required)'
+                        : 'Password length requirement met (${_passwordController.text.length} characters)'),
                 enabled: !isLoading,
               ),
               const SizedBox(height: AppTokens.space16),
@@ -191,7 +198,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               AppButton(
                 label: 'Already have an account? Sign in',
                 variant: AppButtonVariant.tertiary,
-                onPressed: !isLoading ? () => context.pop() : null,
+                onPressed: () => context.pop(),
               ),
               const SizedBox(height: AppTokens.space24),
             ],

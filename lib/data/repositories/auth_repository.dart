@@ -48,7 +48,7 @@ class AuthRepository {
     required int fplTeamId,
   }) async {
     try {
-      await _dio.post(
+      final res = await _dio.post(
         '/api/v1/auth/register',
         data: {
           'email': email.trim().toLowerCase(),
@@ -57,6 +57,13 @@ class AuthRepository {
           'fpl_team_id': fplTeamId,
         },
       );
+      if (res.data is Map<String, dynamic> && res.data['access_token'] != null) {
+        final data = res.data as Map<String, dynamic>;
+        apiClient.setAccessToken(data['access_token'] as String);
+        if (data['refresh_token'] != null) {
+          await secureStore.saveRefreshToken(data['refresh_token'] as String);
+        }
+      }
     } catch (e) {
       throw ErrorMapper.fromException(e);
     }

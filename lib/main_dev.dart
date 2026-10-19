@@ -13,9 +13,8 @@ void main() async {
     // Handled if Google Play Services / Firebase is not available
   }
 
-  const config = AppConfig(
-    flavor: AppFlavor.dev,
-    apiBaseUrl: 'https://fpl-lens-dev.onrender.com',
+  final config = AppConfig.fromEnvironment(
+    defaultFlavor: AppFlavor.dev,
   );
 
   runApp(

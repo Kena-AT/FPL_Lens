@@ -19,30 +19,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool _isEmailValid = false;
-  bool _isPasswordFilled = false;
+  bool get _isFormValid {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+    return email.isNotEmpty && emailRegex.hasMatch(email) && password.isNotEmpty;
+  }
 
   @override
   void initState() {
     super.initState();
-    _emailController.addListener(_validate);
-    _passwordController.addListener(_validate);
-  }
-
-  void _validate() {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-    final validEmail = email.isNotEmpty && emailRegex.hasMatch(email);
-    final filledPassword = password.isNotEmpty;
-
-    if (validEmail != _isEmailValid || filledPassword != _isPasswordFilled) {
-      setState(() {
-        _isEmailValid = validEmail;
-        _isPasswordFilled = filledPassword;
-      });
-    }
+    _emailController.addListener(() => setState(() {}));
+    _passwordController.addListener(() => setState(() {}));
   }
 
   @override
@@ -86,7 +74,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.status == AuthStatus.loading;
     final isLocked = authState.status == AuthStatus.locked;
-    final isFormValid = _isEmailValid && _isPasswordFilled && !isLoading && !isLocked;
+    final isFormValid = _isFormValid && !isLoading && !isLocked;
 
     String? lockoutText;
     if (isLocked && authState.lockoutSeconds != null) {
@@ -230,7 +218,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       AppButton(
                         label: 'Create account',
                         variant: AppButtonVariant.tertiary,
-                        onPressed: !isLoading && !isLocked ? () => context.push('/auth/register') : null,
+                        onPressed: () => context.push('/auth/register'),
                       ),
 
                       const Spacer(),

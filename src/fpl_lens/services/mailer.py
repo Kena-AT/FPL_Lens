@@ -33,9 +33,16 @@ def _send_smtp_message(msg: EmailMessage) -> None:
 
 async def send_verification_email(to_email: str, code: str, expiry_minutes: int = 10) -> None:
     """Sends a 6-digit email verification code."""
+    if settings.is_dev:
+        # Also print directly to stdout so developer can see it instantly without redaction
+        print(f"\n{'='*60}\n>>> [DEV MODE] Verification code for {to_email}: {code} <<<\n{'='*60}\n", flush=True)
+        logger.info("=" * 60)
+        logger.info("[DEV MODE] Verification code for %s: %s (expires in %d min)", to_email, code, expiry_minutes)
+        logger.info("=" * 60)
+
     msg = EmailMessage()
     msg["Subject"] = "Your FPL Lens Verification Code"
-    msg["From"] = settings.EMAIL_FROM_ADDRESS
+    msg["From"] = settings.get_effective_email_from_address()
     msg["To"] = to_email
 
     # Spec §12.5: Email body contains only the code and expiry. No sensitive squad data.
@@ -48,16 +55,23 @@ async def send_verification_email(to_email: str, code: str, expiry_minutes: int 
     try:
         await asyncio.to_thread(_send_smtp_message, msg)
         logger.info("Verification email sent successfully to %s", to_email)
-    except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
+    except (smtplib.SMTPException, OSError) as exc:
         logger.error("Failed to send verification email to %s: %s", to_email, type(exc).__name__)
-        raise
+        if settings.is_prod:
+            raise
 
 
 async def send_password_reset_email(to_email: str, code: str, expiry_minutes: int = 30) -> None:
     """Sends a password reset code."""
+    if settings.is_dev:
+        print(f"\n{'='*60}\n>>> [DEV MODE] Password reset code for {to_email}: {code} <<<\n{'='*60}\n", flush=True)
+        logger.info("=" * 60)
+        logger.info("[DEV MODE] Password reset code for %s: %s (expires in %d min)", to_email, code, expiry_minutes)
+        logger.info("=" * 60)
+
     msg = EmailMessage()
     msg["Subject"] = "FPL Lens Password Reset Code"
-    msg["From"] = settings.EMAIL_FROM_ADDRESS
+    msg["From"] = settings.get_effective_email_from_address()
     msg["To"] = to_email
 
     msg.set_content(
@@ -69,9 +83,10 @@ async def send_password_reset_email(to_email: str, code: str, expiry_minutes: in
     try:
         await asyncio.to_thread(_send_smtp_message, msg)
         logger.info("Password reset email sent successfully to %s", to_email)
-    except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
+    except (smtplib.SMTPException, OSError) as exc:
         logger.error("Failed to send password reset email to %s: %s", to_email, type(exc).__name__)
-        raise
+        if settings.is_prod:
+            raise
 
 
 async def send_lockout_notification(to_email: str, lockout_minutes: int = 15) -> None:
@@ -90,5 +105,5 @@ async def send_lockout_notification(to_email: str, lockout_minutes: int = 15) ->
     try:
         await asyncio.to_thread(_send_smtp_message, msg)
         logger.info("Lockout alert email sent successfully to %s", to_email)
-    except (smtplib.SMTPException, OSError, ssl.SSLError) as exc:
+    except (smtplib.SMTPException, OSError) as exc:
         logger.error("Failed to send lockout alert to %s: %s", to_email, type(exc).__name__)

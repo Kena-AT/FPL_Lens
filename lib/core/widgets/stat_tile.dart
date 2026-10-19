@@ -53,7 +53,7 @@ class StatTile extends StatelessWidget {
     }
 
     final content = Container(
-      padding: const EdgeInsets.all(AppTokens.space16),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 14.0),
       decoration: BoxDecoration(
         color: AppTokens.bgSurface,
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
@@ -73,12 +73,18 @@ class StatTile extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                value,
-                style: AppTextStyles.numeric.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: valueColor,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: AppTextStyles.numeric.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: valueColor,
+                    ),
+                  ),
                 ),
               ),
               if (trendIcon != null) ...[

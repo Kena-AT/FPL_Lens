@@ -10,6 +10,7 @@ from fpl_lens.api.errors import (
     unhandled_exception_handler,
     validation_exception_handler,
 )
+from fpl_lens.config import settings
 from fpl_lens.api.middleware import RequestIdMiddleware
 from fpl_lens.api.routes.auth import router as auth_router
 from fpl_lens.api.routes.devices import router as devices_router
@@ -30,6 +31,16 @@ def create_app() -> FastAPI:
     )
 
     # Register middleware
+    if settings.is_dev:
+        from fastapi.middleware.cors import CORSMiddleware
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
     app.add_middleware(RequestIdMiddleware)
     # Enable GZip compression per Backend Design §7.2
     app.add_middleware(GZipMiddleware, minimum_size=500)

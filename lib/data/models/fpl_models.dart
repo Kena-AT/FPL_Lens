@@ -42,6 +42,13 @@ class PickModel {
   final int multiplier;
   final bool isCaptain;
   final bool isViceCaptain;
+  final String? webName;
+  final String? playerPosition;
+  final int? teamFplId;
+  final String? teamShortName;
+  final int? nowCost;
+  final String? status;
+  final int? chanceOfPlayingNextRound;
 
   const PickModel({
     required this.element,
@@ -49,15 +56,32 @@ class PickModel {
     required this.multiplier,
     required this.isCaptain,
     required this.isViceCaptain,
+    this.webName,
+    this.playerPosition,
+    this.teamFplId,
+    this.teamShortName,
+    this.nowCost,
+    this.status,
+    this.chanceOfPlayingNextRound,
   });
 
   factory PickModel.fromJson(Map<String, dynamic> json) {
+    final rawPos = json['position'];
+    final int positionOrder = rawPos is int ? rawPos : (int.tryParse(rawPos?.toString() ?? '') ?? 1);
+
     return PickModel(
       element: json['element'] as int,
-      position: json['position'] as int,
+      position: positionOrder,
       multiplier: json['multiplier'] as int? ?? 1,
       isCaptain: json['is_captain'] as bool? ?? false,
       isViceCaptain: json['is_vice_captain'] as bool? ?? false,
+      webName: json['web_name'] as String?,
+      playerPosition: (json['player_position'] as String?) ?? (rawPos is String ? rawPos : null),
+      teamFplId: json['team_fpl_id'] as int?,
+      teamShortName: json['team_short_name'] as String?,
+      nowCost: json['now_cost'] as int?,
+      status: json['status'] as String?,
+      chanceOfPlayingNextRound: json['chance_of_playing_next_round'] as int?,
     );
   }
 
@@ -67,6 +91,12 @@ class PickModel {
         'multiplier': multiplier,
         'is_captain': isCaptain,
         'is_vice_captain': isViceCaptain,
+        'web_name': webName,
+        'team_fpl_id': teamFplId,
+        'team_short_name': teamShortName,
+        'now_cost': nowCost,
+        'status': status,
+        'chance_of_playing_next_round': chanceOfPlayingNextRound,
       };
 }
 
@@ -112,6 +142,8 @@ class TransferItemModel {
   final int? entry;
   final int event;
   final DateTime time;
+  final String? elementInName;
+  final String? elementOutName;
 
   const TransferItemModel({
     required this.elementIn,
@@ -121,6 +153,8 @@ class TransferItemModel {
     this.entry,
     required this.event,
     required this.time,
+    this.elementInName,
+    this.elementOutName,
   });
 
   factory TransferItemModel.fromJson(Map<String, dynamic> json) {
@@ -132,6 +166,8 @@ class TransferItemModel {
       entry: json['entry'] as int?,
       event: json['event'] as int,
       time: DateTime.parse(json['time'] as String),
+      elementInName: json['element_in_name'] as String?,
+      elementOutName: json['element_out_name'] as String?,
     );
   }
 
@@ -143,6 +179,8 @@ class TransferItemModel {
         'entry': entry,
         'event': event,
         'time': time.toIso8601String(),
+        'element_in_name': elementInName,
+        'element_out_name': elementOutName,
       };
 }
 

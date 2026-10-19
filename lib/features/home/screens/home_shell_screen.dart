@@ -1,31 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/tokens.dart';
 import '../../squad/screens/squad_screen.dart';
+import '../../squad/providers/squad_provider.dart';
 import 'home_screen.dart';
 
-class HomeShellScreen extends StatefulWidget {
+import '../../lineup/screens/lineup_screen.dart';
+import '../../transfers/screens/transfer_lab_screen.dart';
+
+class HomeShellScreen extends ConsumerStatefulWidget {
   final int initialIndex;
 
   const HomeShellScreen({super.key, this.initialIndex = 0});
 
   @override
-  State<HomeShellScreen> createState() => _HomeShellScreenState();
+  ConsumerState<HomeShellScreen> createState() => _HomeShellScreenState();
 }
 
-class _HomeShellScreenState extends State<HomeShellScreen> {
+class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
   late int _currentIndex;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(squadNotifierProvider.notifier).refreshSquad();
+    });
   }
 
   final List<Widget> _pages = const [
     HomeScreen(),
     SquadScreen(),
-    _LineupPlaceholder(),
-    _TransfersPlaceholder(),
+    LineupScreen(),
+    TransferLabScreen(),
   ];
 
   @override
@@ -48,6 +56,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             setState(() {
               _currentIndex = index;
             });
+            if (index == 2) {
+              // Lineup tab: check for any recent lineup changes
+              ref.read(squadNotifierProvider.notifier).refreshSquad();
+            }
           },
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.transparent,
@@ -80,42 +92,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
               label: 'Transfers',
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LineupPlaceholder extends StatelessWidget {
-  const _LineupPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTokens.bgBase,
-      appBar: AppBar(title: const Text('Lineup')),
-      body: const Center(
-        child: Text(
-          'Lineup Optimizer coming in Sprint 10.',
-          style: TextStyle(color: AppTokens.textSecondary),
-        ),
-      ),
-    );
-  }
-}
-
-class _TransfersPlaceholder extends StatelessWidget {
-  const _TransfersPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTokens.bgBase,
-      appBar: AppBar(title: const Text('Transfer Lab')),
-      body: const Center(
-        child: Text(
-          'Transfer Lab coming in Sprint 11.',
-          style: TextStyle(color: AppTokens.textSecondary),
         ),
       ),
     );

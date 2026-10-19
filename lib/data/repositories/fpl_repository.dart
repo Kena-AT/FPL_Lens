@@ -21,7 +21,7 @@ class DerivedPlayerPrice {
 
 abstract class IFplRepository {
   Future<EntryModel> getEntry(int teamId);
-  Future<SquadPicksResponse> getSquad(int teamId, {int? gw});
+  Future<SquadPicksResponse> getSquad(int teamId, {int? gw, bool force = false});
   Future<HistoryResponse> getHistory(int teamId);
   Future<List<TransferItemModel>> getTransfers(int teamId);
   Future<CurrentGameweekResponse> getCurrentGameweek();
@@ -63,12 +63,15 @@ class FplRepository implements IFplRepository {
   }
 
   @override
-  Future<SquadPicksResponse> getSquad(int teamId, {int? gw}) async {
+  Future<SquadPicksResponse> getSquad(int teamId, {int? gw, bool force = false}) async {
     try {
-      final queryParams = gw != null ? {'gw': gw} : null;
+      final queryParams = <String, dynamic>{
+        if (gw != null) 'gw': gw,
+        if (force) 'force': true,
+      };
       final response = await _dio.get(
         '/api/v1/fpl/entry/$teamId/squad',
-        queryParameters: queryParams,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
       return SquadPicksResponse.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {

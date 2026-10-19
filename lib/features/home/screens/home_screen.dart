@@ -29,9 +29,11 @@ class HomeScreen extends ConsumerWidget {
 
     final totalSquadValueTenths = squadState.squad.fold<int>(
       0,
-      (sum, p) => sum + p.sellingPriceTenths,
+      (sum, p) => sum + p.nowCostTenths,
     );
-    final effectiveSquadValue = totalSquadValueTenths > 0 ? totalSquadValueTenths : squadState.squadValueTenths;
+    final effectiveSquadValue = squadState.squadValueTenths > 0
+        ? squadState.squadValueTenths
+        : (totalSquadValueTenths > 0 ? totalSquadValueTenths : 1000);
 
     return Scaffold(
       backgroundColor: AppTokens.bgBase,
@@ -54,7 +56,7 @@ class HomeScreen extends ConsumerWidget {
         color: AppTokens.neonPrimary,
         backgroundColor: AppTokens.bgSurface,
         onRefresh: () async {
-          final notice = await ref.read(squadNotifierProvider.notifier).refreshSquad();
+          final notice = await ref.read(squadNotifierProvider.notifier).refreshSquad(force: true);
           if (notice != null && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

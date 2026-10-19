@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO", validation_alias="LOG_LEVEL")
     PORT: int = Field(default=8000, validation_alias="PORT")
 
+    @property
+    def is_dev(self) -> bool:
+        return self.ENV.lower() in ("development", "dev", "local")
+
+    @property
+    def is_prod(self) -> bool:
+        return not self.is_dev
+
     # Database
     DATABASE_URL: str = Field(
         default="postgresql://localhost:5432/fpl_lens",
@@ -188,6 +196,13 @@ class Settings(BaseSettings):
             if resolved:
                 return resolved
         return self.SMTP_PASSWORD
+
+    def get_effective_email_from_address(self) -> str:
+        if "EMAIL_FROM_ADDRESS" in os.environ and os.environ["EMAIL_FROM_ADDRESS"]:
+            return os.environ["EMAIL_FROM_ADDRESS"]
+        if self.SMTP_USERNAME and "@" in self.SMTP_USERNAME:
+            return self.SMTP_USERNAME
+        return self.EMAIL_FROM_ADDRESS
 
 
 settings = Settings()

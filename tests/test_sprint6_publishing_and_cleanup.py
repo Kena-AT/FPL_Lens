@@ -54,6 +54,10 @@ def test_bundle_generation_and_publishing(db_session: Session):
     """
     now = datetime.now(UTC)
 
+    # Clean existing stats for test player 88001 to prevent multi-test fixture bleed
+    db_session.query(PlayerFixtureStat).filter(PlayerFixtureStat.player_fpl_id == 88001).delete()
+    db_session.commit()
+
     # 1. Parents: Teams & Gameweeks
     team = Team(
         fpl_id=881,

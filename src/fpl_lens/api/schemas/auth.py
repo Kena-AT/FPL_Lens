@@ -9,7 +9,7 @@ class StrictBaseModel(BaseModel):
 
 class RegisterRequest(StrictBaseModel):
     email: str = Field(..., max_length=255)
-    password: str = Field(..., min_length=12, max_length=128)
+    password: str = Field(..., min_length=8, max_length=128)
     display_name: str = Field(..., min_length=1, max_length=64)
     fpl_team_id: int = Field(..., gt=0, lt=20_000_000)
 
@@ -65,7 +65,7 @@ class ForgotPasswordRequest(StrictBaseModel):
 class ResetPasswordRequest(StrictBaseModel):
     email: str
     code: str = Field(..., min_length=6, max_length=6)
-    new_password: str = Field(..., min_length=12, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
 
     @field_validator("email")
     @classmethod
