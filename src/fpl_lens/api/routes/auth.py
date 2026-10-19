@@ -85,7 +85,9 @@ async def register(
     if existing_user and existing_user.status == "unverified":
         if team_user and team_user.id != existing_user.id:
             now = datetime.now(UTC)
-            if team_user.status == "active" or (team_user.created_at and team_user.created_at >= now - timedelta(hours=24)):
+            if team_user.status == "active" or (
+                team_user.created_at and team_user.created_at >= now - timedelta(hours=24)
+            ):
                 raise AppError(
                     code="FPL_TEAM_ALREADY_REGISTERED",
                     message="This FPL team ID is already registered to an account",
@@ -96,7 +98,9 @@ async def register(
         existing_user.fpl_team_id = payload.fpl_team_id
         db.commit()
 
-        code = create_and_store_email_code(db, user_id=existing_user.id, purpose="verify_email", expiry_minutes=10)
+        code = create_and_store_email_code(
+            db, user_id=existing_user.id, purpose="verify_email", expiry_minutes=10
+        )
         await send_verification_email(existing_user.email, code, expiry_minutes=10)
 
         access_token = create_access_token(existing_user)
@@ -121,12 +125,18 @@ async def register(
     # Limit user enumeration: return identical response if email exists and is active
     if existing_user and existing_user.status == "active":
         logger.info("Registration attempt for already registered active email.")
-        return {"message": "Registration successful. Please check your email for the verification code."}
+        return {
+            "message": "Registration successful. Please check your email for the verification code."
+        }
 
     # One account per FPL team ID rule
     if team_user:
         now = datetime.now(UTC)
-        if team_user.status == "unverified" and team_user.created_at and team_user.created_at < now - timedelta(hours=24):
+        if (
+            team_user.status == "unverified"
+            and team_user.created_at
+            and team_user.created_at < now - timedelta(hours=24)
+        ):
             # Abandoned unverified registration older than 24h: reclaim
             db.delete(team_user)
             db.commit()
@@ -161,7 +171,9 @@ async def register(
     db.commit()
 
     # 6. Generate 6-digit code and dispatch email
-    code = create_and_store_email_code(db, user_id=user_id, purpose="verify_email", expiry_minutes=10)
+    code = create_and_store_email_code(
+        db, user_id=user_id, purpose="verify_email", expiry_minutes=10
+    )
     await send_verification_email(new_user.email, code, expiry_minutes=10)
 
     # 7. Issue access and refresh tokens so the client can authorize /verify-email and /verify-email/resend
@@ -261,13 +273,10 @@ async def resend_verification_email(
     one_hour_ago = now - timedelta(hours=1)
 
     # Check 1 per minute
-    recent_stmt = (
-        select(EmailCode)
-        .where(
-            EmailCode.user_id == current_user.id,
-            EmailCode.purpose == "verify_email",
-            EmailCode.created_at >= one_min_ago,
-        )
+    recent_stmt = select(EmailCode).where(
+        EmailCode.user_id == current_user.id,
+        EmailCode.purpose == "verify_email",
+        EmailCode.created_at >= one_min_ago,
     )
     if db.execute(recent_stmt).first():
         raise AppError(
@@ -277,13 +286,10 @@ async def resend_verification_email(
         )
 
     # Check 5 per hour
-    count_stmt = (
-        select(func.count(EmailCode.id))
-        .where(
-            EmailCode.user_id == current_user.id,
-            EmailCode.purpose == "verify_email",
-            EmailCode.created_at >= one_hour_ago,
-        )
+    count_stmt = select(func.count(EmailCode.id)).where(
+        EmailCode.user_id == current_user.id,
+        EmailCode.purpose == "verify_email",
+        EmailCode.created_at >= one_hour_ago,
     )
     hour_count = db.execute(count_stmt).scalar() or 0
     if hour_count >= 5:
@@ -424,12 +430,9 @@ async def google_auth(
     google_name = claims.get("name") or "Google User"
 
     # Check if Google identity already linked
-    stmt = (
-        select(AuthIdentity)
-        .where(
-            AuthIdentity.provider == "google",
-            AuthIdentity.provider_subject == google_sub,
-        )
+    stmt = select(AuthIdentity).where(
+        AuthIdentity.provider == "google",
+        AuthIdentity.provider_subject == google_sub,
     )
     auth_identity = db.execute(stmt).scalar_one_or_none()
 

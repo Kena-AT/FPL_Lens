@@ -64,7 +64,9 @@ async def get_team_entry(
         return JSONResponse(content=data, headers={"X-Data-Status": "FRESH"})
 
     except UpstreamUnavailableError as exc:
-        logger.warning("FPL upstream error during get_entry(%d): %s. Checking cache fallback.", team_id, exc)
+        logger.warning(
+            "FPL upstream error during get_entry(%d): %s. Checking cache fallback.", team_id, exc
+        )
         stale = get_stale_cached_value(db, cache_key)
         if stale is not None:
             value, expires_at = stale
@@ -119,7 +121,11 @@ async def get_team_squad(
         # Enrich picks with player details from the database so the frontend has names, teams, and prices
         pick_elements = [p.get("element") for p in data.get("picks", []) if p.get("element")]
         if pick_elements:
-            players_stmt = select(Player, Team.short_name).outerjoin(Team, Player.team_fpl_id == Team.fpl_id).where(Player.fpl_id.in_(pick_elements))
+            players_stmt = (
+                select(Player, Team.short_name)
+                .outerjoin(Team, Player.team_fpl_id == Team.fpl_id)
+                .where(Player.fpl_id.in_(pick_elements))
+            )
             player_rows = db.execute(players_stmt).all()
             player_map = {
                 p.fpl_id: {
@@ -193,7 +199,9 @@ async def get_team_history(
         return JSONResponse(content=data, headers={"X-Data-Status": "FRESH"})
 
     except UpstreamUnavailableError as exc:
-        logger.warning("FPL upstream error during get_history(%d): %s. Checking cache fallback.", team_id, exc)
+        logger.warning(
+            "FPL upstream error during get_history(%d): %s. Checking cache fallback.", team_id, exc
+        )
         stale = get_stale_cached_value(db, cache_key)
         if stale is not None:
             value, expires_at = stale
@@ -244,17 +252,27 @@ async def get_team_transfers(
                 element_ids.add(t["element_out"])
 
         if element_ids:
-            players_stmt = select(Player.fpl_id, Player.web_name).where(Player.fpl_id.in_(list(element_ids)))
+            players_stmt = select(Player.fpl_id, Player.web_name).where(
+                Player.fpl_id.in_(list(element_ids))
+            )
             names_map = {row[0]: row[1] for row in db.execute(players_stmt).all()}
             for t in data:
-                t["element_in_name"] = names_map.get(t.get("element_in"), f"Player #{t.get('element_in')}")
-                t["element_out_name"] = names_map.get(t.get("element_out"), f"Player #{t.get('element_out')}")
+                t["element_in_name"] = names_map.get(
+                    t.get("element_in"), f"Player #{t.get('element_in')}"
+                )
+                t["element_out_name"] = names_map.get(
+                    t.get("element_out"), f"Player #{t.get('element_out')}"
+                )
 
         set_cached_value(db, cache_key, data, ttl_seconds=settings.FPL_CACHE_TTL_SECONDS)
         return JSONResponse(content=data, headers={"X-Data-Status": "FRESH"})
 
     except UpstreamUnavailableError as exc:
-        logger.warning("FPL upstream error during get_transfers(%d): %s. Checking cache fallback.", team_id, exc)
+        logger.warning(
+            "FPL upstream error during get_transfers(%d): %s. Checking cache fallback.",
+            team_id,
+            exc,
+        )
         stale = get_stale_cached_value(db, cache_key)
         if stale is not None:
             value, expires_at = stale

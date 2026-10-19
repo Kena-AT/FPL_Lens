@@ -213,7 +213,12 @@ def test_get_projections_and_etag_304(client: TestClient, db_session: Session):
             {
                 "fpl_id": 8202,
                 "fixtures": [
-                    {"fixture_fpl_id": 8601, "expected_points": 5.4, "availability": 1.0, "expected_minutes": 85}
+                    {
+                        "fixture_fpl_id": 8601,
+                        "expected_points": 5.4,
+                        "availability": 1.0,
+                        "expected_minutes": 85,
+                    }
                 ],
             }
         ],
@@ -346,8 +351,24 @@ def test_get_fixtures(client: TestClient, db_session: Session):
     now = datetime.now(UTC)
     gw1 = Gameweek(id=930, name="GW 930", deadline_time=now + timedelta(days=1), finished=False)
     gw2 = Gameweek(id=931, name="GW 931", deadline_time=now + timedelta(days=8), finished=False)
-    t1 = Team(fpl_id=910, name="City Test", short_name="MCT", strength_attack_home=1300, strength_attack_away=1300, strength_defence_home=1200, strength_defence_away=1200)
-    t2 = Team(fpl_id=911, name="United Test", short_name="MNT", strength_attack_home=1100, strength_attack_away=1100, strength_defence_home=1100, strength_defence_away=1100)
+    t1 = Team(
+        fpl_id=910,
+        name="City Test",
+        short_name="MCT",
+        strength_attack_home=1300,
+        strength_attack_away=1300,
+        strength_defence_home=1200,
+        strength_defence_away=1200,
+    )
+    t2 = Team(
+        fpl_id=911,
+        name="United Test",
+        short_name="MNT",
+        strength_attack_home=1100,
+        strength_attack_away=1100,
+        strength_defence_home=1100,
+        strength_defence_away=1100,
+    )
 
     db_session.merge(gw1)
     db_session.merge(gw2)
@@ -355,8 +376,22 @@ def test_get_fixtures(client: TestClient, db_session: Session):
     db_session.merge(t2)
     db_session.flush()
 
-    f1 = Fixture(fpl_id=9801, gameweek=930, home_team_fpl_id=910, away_team_fpl_id=911, kickoff_time=now + timedelta(days=1), finished=False)
-    f2 = Fixture(fpl_id=9802, gameweek=931, home_team_fpl_id=911, away_team_fpl_id=910, kickoff_time=now + timedelta(days=8), finished=False)
+    f1 = Fixture(
+        fpl_id=9801,
+        gameweek=930,
+        home_team_fpl_id=910,
+        away_team_fpl_id=911,
+        kickoff_time=now + timedelta(days=1),
+        finished=False,
+    )
+    f2 = Fixture(
+        fpl_id=9802,
+        gameweek=931,
+        home_team_fpl_id=911,
+        away_team_fpl_id=910,
+        kickoff_time=now + timedelta(days=8),
+        finished=False,
+    )
 
     db_session.merge(f1)
     db_session.merge(f2)
@@ -518,10 +553,16 @@ def test_cleanup_job_retention_rules(db_session: Session):
         expires_at=now + timedelta(minutes=5),
     )
 
-    db_session.add_all([
-        expired_code, valid_code, expired_token, valid_token,
-        expired_cache, valid_cache,
-    ])
+    db_session.add_all(
+        [
+            expired_code,
+            valid_code,
+            expired_token,
+            valid_token,
+            expired_cache,
+            valid_cache,
+        ]
+    )
     db_session.commit()
 
     # Run cleanup job
@@ -540,9 +581,17 @@ def test_cleanup_job_retention_rules(db_session: Session):
 
     # Verify tokens, codes, and cache state
     assert db_session.query(EmailCode).filter(EmailCode.code_hash == exp_code_hash).first() is None
-    assert db_session.query(EmailCode).filter(EmailCode.code_hash == val_code_hash).first() is not None
-    assert db_session.query(RefreshToken).filter(RefreshToken.token_hash == exp_token_hash).first() is None
-    assert db_session.query(RefreshToken).filter(RefreshToken.token_hash == val_token_hash).first() is not None
+    assert (
+        db_session.query(EmailCode).filter(EmailCode.code_hash == val_code_hash).first() is not None
+    )
+    assert (
+        db_session.query(RefreshToken).filter(RefreshToken.token_hash == exp_token_hash).first()
+        is None
+    )
+    assert (
+        db_session.query(RefreshToken).filter(RefreshToken.token_hash == val_token_hash).first()
+        is not None
+    )
     assert db_session.query(CacheEntry).filter(CacheEntry.cache_key == exp_key).first() is None
     assert db_session.query(CacheEntry).filter(CacheEntry.cache_key == val_key).first() is not None
 

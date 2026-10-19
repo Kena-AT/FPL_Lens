@@ -6,10 +6,7 @@ Used as the test oracle for the pure Dart optimiser.
 from __future__ import annotations
 
 import itertools
-import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
-
 
 MIN_DEF, MIN_MID, MIN_FWD = 3, 2, 1
 MAX_DEF, MAX_MID, MAX_FWD = 5, 5, 3
@@ -37,8 +34,8 @@ class PlayerInput:
     xp: float
     p_start: float
     p_sub: float = 0.0
-    xp_start: Optional[float] = None
-    xp_sub: Optional[float] = None
+    xp_start: float | None = None
+    xp_sub: float | None = None
 
     @property
     def p_app(self) -> float:
@@ -116,8 +113,8 @@ def evaluate_captain_pair(xi: list[PlayerInput]) -> tuple[PlayerInput, PlayerInp
     where q_c = P(app_c).
     """
     xi_base_xp = sum(p.xp for p in xi)
-    best_c: Optional[PlayerInput] = None
-    best_v: Optional[PlayerInput] = None
+    best_c: PlayerInput | None = None
+    best_v: PlayerInput | None = None
     best_score = -float("inf")
 
     for c in xi:
@@ -163,15 +160,9 @@ def apply_fpl_auto_subs(
         c = formation_counts(trial)
         slots_left = 11 - len(trial)
         below_min = (
-            max(0, MIN_DEF - c["DEF"])
-            + max(0, MIN_MID - c["MID"])
-            + max(0, MIN_FWD - c["FWD"])
+            max(0, MIN_DEF - c["DEF"]) + max(0, MIN_MID - c["MID"]) + max(0, MIN_FWD - c["FWD"])
         )
-        within_max = (
-            c["DEF"] <= MAX_DEF
-            and c["MID"] <= MAX_MID
-            and c["FWD"] <= MAX_FWD
-        )
+        within_max = c["DEF"] <= MAX_DEF and c["MID"] <= MAX_MID and c["FWD"] <= MAX_FWD
         if within_max and below_min <= slots_left:
             xi = trial
             outfield_missing -= 1
@@ -206,7 +197,7 @@ def evaluate_bench_orders(
         absent_ids: set[int] = set()
         for i in range(n_starters):
             if (state_idx >> i) & 1:
-                prob *= (1.0 - starter_p_starts[i])
+                prob *= 1.0 - starter_p_starts[i]
                 absent_ids.add(starters[i].fpl_id)
             else:
                 prob *= starter_p_starts[i]
@@ -214,7 +205,7 @@ def evaluate_bench_orders(
             active_states.append((prob, absent_ids))
 
     starter_ids = {p.fpl_id for p in starters}
-    best_order: Optional[list[PlayerInput]] = None
+    best_order: list[PlayerInput] | None = None
     best_realised_score = -float("inf")
 
     # Evaluate 6 permutations
@@ -291,10 +282,10 @@ def optimize_lineup(
         top_candidates = candidate_xis[:1]
         is_fallback = False
 
-    best_result: Optional[LineupResult] = None
+    best_result: LineupResult | None = None
     best_overall_score = -float("inf")
 
-    for xi, c, v, pair_score in top_candidates:
+    for xi, c, v, _pair_score in top_candidates:
         xi_ids = {p.fpl_id for p in xi}
         bench_players = [p for p in squad if p.fpl_id not in xi_ids]
 

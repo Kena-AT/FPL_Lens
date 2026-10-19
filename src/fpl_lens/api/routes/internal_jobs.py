@@ -79,6 +79,7 @@ async def trigger_internal_job(
 
     if name == "project":
         from fpl_lens.engine.service import run_projection_job
+
         result = run_projection_job(db)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 

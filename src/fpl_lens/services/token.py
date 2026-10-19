@@ -92,7 +92,9 @@ def generate_raw_refresh_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def issue_refresh_token(db: Session, user_id: uuid.UUID, family_id: uuid.UUID | None = None) -> tuple[str, RefreshToken]:
+def issue_refresh_token(
+    db: Session, user_id: uuid.UUID, family_id: uuid.UUID | None = None
+) -> tuple[str, RefreshToken]:
     """Issues and persists a new hashed refresh token."""
     raw_token = generate_raw_refresh_token()
     token_digest = hash_token(raw_token)

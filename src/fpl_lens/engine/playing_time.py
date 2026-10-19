@@ -127,7 +127,9 @@ def calculate_playing_time(
             starts_60_plus = [h for h in starts if h.minutes >= 60]
             emp_p60_start = len(starts_60_plus) / k_start
             w_p60_start = k_start / (k_start + shrinkage_weight)
-            p_60_given_start = w_p60_start * emp_p60_start + (1.0 - w_p60_start) * pos_prior["p_60_start"]
+            p_60_given_start = (
+                w_p60_start * emp_p60_start + (1.0 - w_p60_start) * pos_prior["p_60_start"]
+            )
         else:
             p_60_given_start = pos_prior["p_60_start"]
 
@@ -144,28 +146,32 @@ def calculate_playing_time(
         # Shrunk minutes per scenario
         m_se_vals = [h.minutes for h in starts if h.minutes >= 60]
         m_se = (
-            (sum(m_se_vals) + shrinkage_weight * pos_prior["m_se"]) / (len(m_se_vals) + shrinkage_weight)
+            (sum(m_se_vals) + shrinkage_weight * pos_prior["m_se"])
+            / (len(m_se_vals) + shrinkage_weight)
             if m_se_vals
             else pos_prior["m_se"]
         )
 
         m_sd_vals = [h.minutes for h in starts if h.minutes < 60]
         m_sd = (
-            (sum(m_sd_vals) + shrinkage_weight * pos_prior["m_sd"]) / (len(m_sd_vals) + shrinkage_weight)
+            (sum(m_sd_vals) + shrinkage_weight * pos_prior["m_sd"])
+            / (len(m_sd_vals) + shrinkage_weight)
             if m_sd_vals
             else pos_prior["m_sd"]
         )
 
         m_sc_vals = [h.minutes for h in non_starts if h.minutes >= 60]
         m_sc = (
-            (sum(m_sc_vals) + shrinkage_weight * pos_prior["m_sc"]) / (len(m_sc_vals) + shrinkage_weight)
+            (sum(m_sc_vals) + shrinkage_weight * pos_prior["m_sc"])
+            / (len(m_sc_vals) + shrinkage_weight)
             if m_sc_vals
             else pos_prior["m_sc"]
         )
 
         m_sb_vals = [h.minutes for h in non_starts if 0 < h.minutes < 60]
         m_sb = (
-            (sum(m_sb_vals) + shrinkage_weight * pos_prior["m_sb"]) / (len(m_sb_vals) + shrinkage_weight)
+            (sum(m_sb_vals) + shrinkage_weight * pos_prior["m_sb"])
+            / (len(m_sb_vals) + shrinkage_weight)
             if m_sb_vals
             else pos_prior["m_sb"]
         )

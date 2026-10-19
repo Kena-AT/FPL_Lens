@@ -14,15 +14,14 @@ Covers:
 
 import json
 import os
-import pytest
+
 from fpl_lens.engine.optimiser import (
     PlayerInput,
-    is_valid_xi,
-    formation_counts,
-    enumerate_valid_xis,
-    evaluate_captain_pair,
     apply_fpl_auto_subs,
+    enumerate_valid_xis,
     evaluate_bench_orders,
+    evaluate_captain_pair,
+    is_valid_xi,
     optimize_lineup,
 )
 from fpl_lens.engine.playing_time import calibrate_p60_start
@@ -63,23 +62,45 @@ def make_standard_squad(seed_offset: int = 0) -> list[PlayerInput]:
     squad.append(make_test_player(2 + seed_offset, "Turner", "GK", club_id=2, xp=1.2, p_start=0.05))
 
     # 5 DEFs
-    squad.append(make_test_player(3 + seed_offset, "Gabriel", "DEF", club_id=1, xp=5.2, p_start=0.95))
-    squad.append(make_test_player(4 + seed_offset, "Saliba", "DEF", club_id=1, xp=5.0, p_start=0.95))
-    squad.append(make_test_player(5 + seed_offset, "Alexander-Arnold", "DEF", club_id=3, xp=6.1, p_start=0.92))
-    squad.append(make_test_player(6 + seed_offset, "Gvardiol", "DEF", club_id=4, xp=4.9, p_start=0.88))
+    squad.append(
+        make_test_player(3 + seed_offset, "Gabriel", "DEF", club_id=1, xp=5.2, p_start=0.95)
+    )
+    squad.append(
+        make_test_player(4 + seed_offset, "Saliba", "DEF", club_id=1, xp=5.0, p_start=0.95)
+    )
+    squad.append(
+        make_test_player(
+            5 + seed_offset, "Alexander-Arnold", "DEF", club_id=3, xp=6.1, p_start=0.92
+        )
+    )
+    squad.append(
+        make_test_player(6 + seed_offset, "Gvardiol", "DEF", club_id=4, xp=4.9, p_start=0.88)
+    )
     squad.append(make_test_player(7 + seed_offset, "Barco", "DEF", club_id=5, xp=1.8, p_start=0.20))
 
     # 5 MIDs
     squad.append(make_test_player(8 + seed_offset, "Salah", "MID", club_id=3, xp=8.5, p_start=0.98))
     squad.append(make_test_player(9 + seed_offset, "Saka", "MID", club_id=1, xp=7.8, p_start=0.96))
-    squad.append(make_test_player(10 + seed_offset, "Palmer", "MID", club_id=6, xp=7.4, p_start=0.94))
-    squad.append(make_test_player(11 + seed_offset, "Gordon", "MID", club_id=7, xp=5.5, p_start=0.90))
-    squad.append(make_test_player(12 + seed_offset, "Winks", "MID", club_id=8, xp=2.3, p_start=0.85))
+    squad.append(
+        make_test_player(10 + seed_offset, "Palmer", "MID", club_id=6, xp=7.4, p_start=0.94)
+    )
+    squad.append(
+        make_test_player(11 + seed_offset, "Gordon", "MID", club_id=7, xp=5.5, p_start=0.90)
+    )
+    squad.append(
+        make_test_player(12 + seed_offset, "Winks", "MID", club_id=8, xp=2.3, p_start=0.85)
+    )
 
     # 3 FWDs
-    squad.append(make_test_player(13 + seed_offset, "Haaland", "FWD", club_id=4, xp=9.2, p_start=0.98))
-    squad.append(make_test_player(14 + seed_offset, "Watkins", "FWD", club_id=9, xp=6.5, p_start=0.92))
-    squad.append(make_test_player(15 + seed_offset, "Stewart", "FWD", club_id=10, xp=1.5, p_start=0.10))
+    squad.append(
+        make_test_player(13 + seed_offset, "Haaland", "FWD", club_id=4, xp=9.2, p_start=0.98)
+    )
+    squad.append(
+        make_test_player(14 + seed_offset, "Watkins", "FWD", club_id=9, xp=6.5, p_start=0.92)
+    )
+    squad.append(
+        make_test_player(15 + seed_offset, "Stewart", "FWD", club_id=10, xp=1.5, p_start=0.10)
+    )
 
     return squad
 
@@ -112,23 +133,29 @@ def test_formation_validator_covers_all_legal_formations():
 
     # Test invalid formations
     # 2 GKs
-    invalid_2gk = [make_test_player(1, "G1", "GK"), make_test_player(2, "G2", "GK")] + [
-        make_test_player(10 + i, f"D{i}", "DEF") for i in range(4)
-    ] + [make_test_player(20 + i, f"M{i}", "MID") for i in range(4)] + [make_test_player(30, "F1", "FWD")]
+    invalid_2gk = (
+        [make_test_player(1, "G1", "GK"), make_test_player(2, "G2", "GK")]
+        + [make_test_player(10 + i, f"D{i}", "DEF") for i in range(4)]
+        + [make_test_player(20 + i, f"M{i}", "MID") for i in range(4)]
+        + [make_test_player(30, "F1", "FWD")]
+    )
     assert not is_valid_xi(invalid_2gk)
 
     # 2 DEFs (below minimum 3)
-    invalid_2def = [make_test_player(1, "G1", "GK")] + [
-        make_test_player(10 + i, f"D{i}", "DEF") for i in range(2)
-    ] + [make_test_player(20 + i, f"M{i}", "MID") for i in range(5)] + [
-        make_test_player(30 + i, f"F{i}", "FWD") for i in range(3)
-    ]
+    invalid_2def = (
+        [make_test_player(1, "G1", "GK")]
+        + [make_test_player(10 + i, f"D{i}", "DEF") for i in range(2)]
+        + [make_test_player(20 + i, f"M{i}", "MID") for i in range(5)]
+        + [make_test_player(30 + i, f"F{i}", "FWD") for i in range(3)]
+    )
     assert not is_valid_xi(invalid_2def)
 
     # 0 FWDs (below minimum 1)
-    invalid_0fwd = [make_test_player(1, "G1", "GK")] + [
-        make_test_player(10 + i, f"D{i}", "DEF") for i in range(5)
-    ] + [make_test_player(20 + i, f"M{i}", "MID") for i in range(5)]
+    invalid_0fwd = (
+        [make_test_player(1, "G1", "GK")]
+        + [make_test_player(10 + i, f"D{i}", "DEF") for i in range(5)]
+        + [make_test_player(20 + i, f"M{i}", "MID") for i in range(5)]
+    )
     assert not is_valid_xi(invalid_0fwd)
 
 
@@ -162,11 +189,24 @@ def test_joint_captaincy_evaluation():
 def test_auto_subs_gk_and_outfield():
     """Spec §5.2: Auto-substitution rules."""
     squad = make_standard_squad()
-    starting_xi = [p for p in squad if p.web_name in {
-        "Raya", "Gabriel", "Saliba", "Alexander-Arnold", "Gvardiol",
-        "Salah", "Saka", "Palmer", "Gordon",
-        "Haaland", "Watkins"
-    }]
+    starting_xi = [
+        p
+        for p in squad
+        if p.web_name
+        in {
+            "Raya",
+            "Gabriel",
+            "Saliba",
+            "Alexander-Arnold",
+            "Gvardiol",
+            "Salah",
+            "Saka",
+            "Palmer",
+            "Gordon",
+            "Haaland",
+            "Watkins",
+        }
+    ]
     bench = [p for p in squad if p not in starting_xi]
     bench_gk = [p for p in bench if p.position == "GK"][0]
     bench_outfields = [p for p in bench if p.position != "GK"]
@@ -289,7 +329,9 @@ def test_generate_20_golden_fixtures():
             squad[7] = make_test_player(squad[7].fpl_id, "SuperSalah", "MID", xp=11.0, p_start=0.99)
         if case_idx % 3 == 0:
             # Rotation risk starter
-            squad[2] = make_test_player(squad[2].fpl_id, squad[2].web_name, "DEF", xp=4.0, p_start=0.35)
+            squad[2] = make_test_player(
+                squad[2].fpl_id, squad[2].web_name, "DEF", xp=4.0, p_start=0.35
+            )
         if case_idx % 4 == 0:
             # Premium defender
             squad[4] = make_test_player(squad[4].fpl_id, "Trent", "DEF", xp=7.5, p_start=0.95)

@@ -35,9 +35,17 @@ async def send_verification_email(to_email: str, code: str, expiry_minutes: int 
     """Sends a 6-digit email verification code."""
     if settings.is_dev:
         # Also print directly to stdout so developer can see it instantly without redaction
-        print(f"\n{'='*60}\n>>> [DEV MODE] Verification code for {to_email}: {code} <<<\n{'='*60}\n", flush=True)
+        print(
+            f"\n{'=' * 60}\n>>> [DEV MODE] Verification code for {to_email}: {code} <<<\n{'=' * 60}\n",
+            flush=True,
+        )
         logger.info("=" * 60)
-        logger.info("[DEV MODE] Verification code for %s: %s (expires in %d min)", to_email, code, expiry_minutes)
+        logger.info(
+            "[DEV MODE] Verification code for %s: %s (expires in %d min)",
+            to_email,
+            code,
+            expiry_minutes,
+        )
         logger.info("=" * 60)
 
     msg = EmailMessage()
@@ -64,9 +72,17 @@ async def send_verification_email(to_email: str, code: str, expiry_minutes: int 
 async def send_password_reset_email(to_email: str, code: str, expiry_minutes: int = 30) -> None:
     """Sends a password reset code."""
     if settings.is_dev:
-        print(f"\n{'='*60}\n>>> [DEV MODE] Password reset code for {to_email}: {code} <<<\n{'='*60}\n", flush=True)
+        print(
+            f"\n{'=' * 60}\n>>> [DEV MODE] Password reset code for {to_email}: {code} <<<\n{'=' * 60}\n",
+            flush=True,
+        )
         logger.info("=" * 60)
-        logger.info("[DEV MODE] Password reset code for %s: %s (expires in %d min)", to_email, code, expiry_minutes)
+        logger.info(
+            "[DEV MODE] Password reset code for %s: %s (expires in %d min)",
+            to_email,
+            code,
+            expiry_minutes,
+        )
         logger.info("=" * 60)
 
     msg = EmailMessage()

@@ -203,7 +203,9 @@ def run_projections_for_gameweek(
                 player_fpl_id=int(p.fpl_id),
                 position=pos_str,
                 status=str(p.status or "a"),
-                chance_of_playing_next_round=int(p.chance_of_playing_next_round) if p.chance_of_playing_next_round is not None else None,
+                chance_of_playing_next_round=int(p.chance_of_playing_next_round)
+                if p.chance_of_playing_next_round is not None
+                else None,
                 team_fpl_id=int(p.team_fpl_id or 0),
                 xg_90=xg_90,
                 xa_90=xa_90,
@@ -238,7 +240,11 @@ def run_projections_for_gameweek(
             existing_run.id,
         )
         # Ensure published_projections is populated even on reused run
-        existing_pub = db.query(PublishedProjection).filter(PublishedProjection.gameweek == target_gameweek).first()
+        existing_pub = (
+            db.query(PublishedProjection)
+            .filter(PublishedProjection.gameweek == target_gameweek)
+            .first()
+        )
         if not existing_pub:
             _publish_bundle(
                 db=db,
@@ -319,7 +325,9 @@ def run_projections_for_gameweek(
     )
 
     db.commit()
-    logger.info("Projection run %s committed and published with %d projections", run_id, len(projections))
+    logger.info(
+        "Projection run %s committed and published with %d projections", run_id, len(projections)
+    )
 
     return {
         "status": "OK",
@@ -343,23 +351,25 @@ def _publish_bundle(
     """Generates the JSON document bundle and persists to published_projections table."""
     players_dict: dict[int, list[dict[str, Any]]] = {}
     for p in projections:
-        players_dict.setdefault(p.player_fpl_id, []).append({
-            "fixture_fpl_id": p.fixture_fpl_id,
-            "expected_points": round(float(p.components.expected_points), 2),
-            "availability": round(float(p.availability), 2),
-            "p_start": round(float(p.p_start), 2),
-            "p_sub": round(float(p.p_sub), 2),
-            "p_60_plus_given_start": round(float(p.p_60_plus_given_start), 2),
-            "expected_minutes": round(float(p.expected_minutes), 1),
-            "exp_goals": round(float(p.components.exp_goals), 3),
-            "exp_assists": round(float(p.components.exp_assists), 3),
-            "exp_appearance": round(float(p.components.exp_appearance), 3),
-            "exp_clean_sheet": round(float(p.components.exp_clean_sheet), 3),
-            "exp_goals_conceded": round(float(p.components.exp_goals_conceded), 3),
-            "exp_dc": round(float(p.components.exp_dc), 3),
-            "exp_bonus": round(float(p.components.exp_bonus), 3),
-            "exp_card_penalty": round(float(p.components.exp_card_penalty), 3),
-        })
+        players_dict.setdefault(p.player_fpl_id, []).append(
+            {
+                "fixture_fpl_id": p.fixture_fpl_id,
+                "expected_points": round(float(p.components.expected_points), 2),
+                "availability": round(float(p.availability), 2),
+                "p_start": round(float(p.p_start), 2),
+                "p_sub": round(float(p.p_sub), 2),
+                "p_60_plus_given_start": round(float(p.p_60_plus_given_start), 2),
+                "expected_minutes": round(float(p.expected_minutes), 1),
+                "exp_goals": round(float(p.components.exp_goals), 3),
+                "exp_assists": round(float(p.components.exp_assists), 3),
+                "exp_appearance": round(float(p.components.exp_appearance), 3),
+                "exp_clean_sheet": round(float(p.components.exp_clean_sheet), 3),
+                "exp_goals_conceded": round(float(p.components.exp_goals_conceded), 3),
+                "exp_dc": round(float(p.components.exp_dc), 3),
+                "exp_bonus": round(float(p.components.exp_bonus), 3),
+                "exp_card_penalty": round(float(p.components.exp_card_penalty), 3),
+            }
+        )
 
     players_list = [
         {"fpl_id": fpl_id, "fixtures": fixtures}
@@ -375,12 +385,14 @@ def _publish_bundle(
         "players": players_list,
     }
 
-    pub_stmt = pg_insert(PublishedProjection).values({
-        "gameweek": gameweek,
-        "run_id": run_id,
-        "published_at": datetime.now(UTC),
-        "bundle_json": bundle,
-    })
+    pub_stmt = pg_insert(PublishedProjection).values(
+        {
+            "gameweek": gameweek,
+            "run_id": run_id,
+            "published_at": datetime.now(UTC),
+            "bundle_json": bundle,
+        }
+    )
     pub_stmt = pub_stmt.on_conflict_do_update(
         index_elements=["gameweek"],
         set_={

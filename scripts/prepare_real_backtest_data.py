@@ -54,7 +54,12 @@ def main():
         opp = int(r.get("opponent_team", 0) or 0)
 
         # Defensive contribution proxy: for defenders/mids, bps > 20 with cs or > 12 recoveries
-        dc = 1 if (pos in ("DEF", "GK") and cs == 1 and mins >= 60) or (bonus >= 1 and goals == 0 and assists == 0) else 0
+        dc = (
+            1
+            if (pos in ("DEF", "GK") and cs == 1 and mins >= 60)
+            or (bonus >= 1 and goals == 0 and assists == 0)
+            else 0
+        )
 
         players[elem]["matches"].append(
             {

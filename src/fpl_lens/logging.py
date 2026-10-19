@@ -11,13 +11,9 @@ request_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 )
 
 # Compiled regex patterns for redaction
-EMAIL_PATTERN = re.compile(
-    r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
-)
+EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
 SIX_DIGIT_CODE_PATTERN = re.compile(r"\b\d{6}\b")
-JWT_TOKEN_PATTERN = re.compile(
-    r"\bey[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*\b"
-)
+JWT_TOKEN_PATTERN = re.compile(r"\bey[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*\b")
 BEARER_PATTERN = re.compile(r"(?i)bearer\s+[A-Za-z0-9._~+/-]+", re.IGNORECASE)
 LONG_SECRET_PATTERN = re.compile(r"\b[A-Za-z0-9_-]{32,}\b")
 KEY_VALUE_SECRET_PATTERN = re.compile(
@@ -31,17 +27,17 @@ def redact_text(text: str) -> str:
         return text
 
     # Redact key-value secrets first
-    text = KEY_VALUE_SECRET_PATTERN.sub(r'\1: [REDACTED]', text)
+    text = KEY_VALUE_SECRET_PATTERN.sub(r"\1: [REDACTED]", text)
     # Redact Authorization header values
-    text = BEARER_PATTERN.sub('Bearer [REDACTED]', text)
+    text = BEARER_PATTERN.sub("Bearer [REDACTED]", text)
     # Redact JWTs
-    text = JWT_TOKEN_PATTERN.sub('[REDACTED_TOKEN]', text)
+    text = JWT_TOKEN_PATTERN.sub("[REDACTED_TOKEN]", text)
     # Redact emails
-    text = EMAIL_PATTERN.sub('[REDACTED_EMAIL]', text)
+    text = EMAIL_PATTERN.sub("[REDACTED_EMAIL]", text)
     # Redact 6-digit verification codes
-    text = SIX_DIGIT_CODE_PATTERN.sub('[REDACTED_CODE]', text)
+    text = SIX_DIGIT_CODE_PATTERN.sub("[REDACTED_CODE]", text)
     # Redact long tokens
-    text = LONG_SECRET_PATTERN.sub('[REDACTED_TOKEN]', text)
+    text = LONG_SECRET_PATTERN.sub("[REDACTED_TOKEN]", text)
 
     return text
 
@@ -57,7 +53,11 @@ def redact_object(obj: Any) -> Any:
                 redacted[k] = "[REDACTED]"
             elif "email" in k.lower() and isinstance(v, str):
                 redacted[k] = "[REDACTED_EMAIL]"
-            elif "name" in k.lower() and isinstance(v, str) and k.lower() not in ["job_name", "model_version", "short_name"]:
+            elif (
+                "name" in k.lower()
+                and isinstance(v, str)
+                and k.lower() not in ["job_name", "model_version", "short_name"]
+            ):
                 redacted[k] = "[REDACTED_NAME]"
             else:
                 redacted[k] = redact_object(v)

@@ -40,7 +40,9 @@ class User(Base):
     locked_until = Column(DateTime(timezone=True), nullable=True)
     deletion_requested_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class AuthIdentity(Base):
@@ -52,9 +54,7 @@ class AuthIdentity(Base):
     provider_subject = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    __table_args__ = (
-        UniqueConstraint("provider", "provider_subject", name="uq_identity"),
-    )
+    __table_args__ = (UniqueConstraint("provider", "provider_subject", name="uq_identity"),)
 
 
 class EmailCode(Base):
@@ -69,9 +69,7 @@ class EmailCode(Base):
     used_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    __table_args__ = (
-        Index("idx_email_codes_user", "user_id", text("created_at DESC")),
-    )
+    __table_args__ = (Index("idx_email_codes_user", "user_id", text("created_at DESC")),)
 
 
 class RefreshToken(Base):
@@ -86,9 +84,7 @@ class RefreshToken(Base):
     revoked_at = Column(DateTime(timezone=True), nullable=True)
     replaced_by = Column(UUID(as_uuid=True), ForeignKey("refresh_tokens.id"), nullable=True)
 
-    __table_args__ = (
-        Index("idx_refresh_family", "family_id"),
-    )
+    __table_args__ = (Index("idx_refresh_family", "family_id"),)
 
 
 class Device(Base):
@@ -101,15 +97,15 @@ class Device(Base):
     last_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    __table_args__ = (
-        Index("idx_devices_user", "user_id"),
-    )
+    __table_args__ = (Index("idx_devices_user", "user_id"),)
 
 
 class NotificationPreference(Base):
     __tablename__ = "notification_preferences"
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
     deadline_reminders = Column(Boolean, nullable=False, default=True)
     injury_alerts = Column(Boolean, nullable=False, default=True)
     deadline_reminder_hours = Column(Integer, nullable=False, default=6)
@@ -132,7 +128,9 @@ class Team(Base):
     strength_attack_away = Column(Integer, nullable=False)
     strength_defence_home = Column(Integer, nullable=False)
     strength_defence_away = Column(Integer, nullable=False)
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Player(Base):
@@ -151,11 +149,11 @@ class Player(Base):
     news_added_at = Column(DateTime(timezone=True), nullable=True)
     expected_goals_season = Column(Numeric(7, 3), nullable=True)
     expected_assists_season = Column(Numeric(7, 3), nullable=True)
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
-
-    __table_args__ = (
-        Index("idx_players_team", "team_fpl_id"),
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+
+    __table_args__ = (Index("idx_players_team", "team_fpl_id"),)
 
 
 class Gameweek(Base):
@@ -169,7 +167,9 @@ class Gameweek(Base):
     is_next = Column(Boolean, nullable=False, default=False)
 
     __table_args__ = (
-        Index("uq_gw_current", "is_current", unique=True, postgresql_where=text("is_current = true")),
+        Index(
+            "uq_gw_current", "is_current", unique=True, postgresql_where=text("is_current = true")
+        ),
     )
 
 
@@ -184,11 +184,11 @@ class Fixture(Base):
     finished = Column(Boolean, nullable=False, default=False)
     home_score = Column(Integer, nullable=True)
     away_score = Column(Integer, nullable=True)
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
-
-    __table_args__ = (
-        Index("idx_fixtures_gw", "gameweek"),
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+
+    __table_args__ = (Index("idx_fixtures_gw", "gameweek"),)
 
 
 class PlayerFixtureStat(Base):
@@ -211,9 +211,7 @@ class PlayerFixtureStat(Base):
     red_cards = Column(Integer, nullable=False, default=0)
     source_fetched_at = Column(DateTime(timezone=True), nullable=False)
 
-    __table_args__ = (
-        Index("idx_pfs_player_gw", "player_fpl_id", text("gameweek DESC")),
-    )
+    __table_args__ = (Index("idx_pfs_player_gw", "player_fpl_id", text("gameweek DESC")),)
 
 
 class ModelVersion(Base):
@@ -242,14 +240,18 @@ class ProjectionRun(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     __table_args__ = (
-        UniqueConstraint("gameweek", "model_version", "input_hash", name="uq_projection_run_inputs"),
+        UniqueConstraint(
+            "gameweek", "model_version", "input_hash", name="uq_projection_run_inputs"
+        ),
     )
 
 
 class PlayerProjection(Base):
     __tablename__ = "player_projections"
 
-    run_id = Column(UUID(as_uuid=True), ForeignKey("projection_runs.id", ondelete="CASCADE"), primary_key=True)
+    run_id = Column(
+        UUID(as_uuid=True), ForeignKey("projection_runs.id", ondelete="CASCADE"), primary_key=True
+    )
     player_fpl_id = Column(Integer, ForeignKey("players.fpl_id"), primary_key=True)
     fixture_fpl_id = Column(Integer, ForeignKey("fixtures.fpl_id"), primary_key=True)
     availability = Column(Numeric(4, 3), nullable=False)
@@ -284,9 +286,7 @@ class CacheEntry(Base):
     value = Column(JSONB, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
 
-    __table_args__ = (
-        Index("idx_cache_expiry", "expires_at"),
-    )
+    __table_args__ = (Index("idx_cache_expiry", "expires_at"),)
 
 
 class IngestionRun(Base):

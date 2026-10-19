@@ -169,7 +169,10 @@ class FPLClient:
 
                 # 403 or blocked check per AGENTS.md §7.2
                 if response.status_code == 403:
-                    logger.error("FPL returned 403 Forbidden on %s. Upstream may be blocking User-Agent.", endpoint)
+                    logger.error(
+                        "FPL returned 403 Forbidden on %s. Upstream may be blocking User-Agent.",
+                        endpoint,
+                    )
 
                 return response
 
@@ -186,7 +189,9 @@ class FPLClient:
                     await asyncio.sleep(backoff)
                     backoff *= 2
                     continue
-                logger.error("FPL upstream connection failed after retries on %s: %s", endpoint, exc)
+                logger.error(
+                    "FPL upstream connection failed after retries on %s: %s", endpoint, exc
+                )
                 raise UpstreamUnavailableError(f"FPL request to {endpoint} failed: {exc}") from exc
 
     async def get_entry(self, team_id: int) -> dict[str, Any] | None:
@@ -258,7 +263,9 @@ class FPLClient:
         if resp.status_code == 404:
             return None
         if resp.status_code >= 400:
-            raise UpstreamUnavailableError(f"FPL element-summary returned status {resp.status_code}")
+            raise UpstreamUnavailableError(
+                f"FPL element-summary returned status {resp.status_code}"
+            )
         return resp.json()
 
 

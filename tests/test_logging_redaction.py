@@ -48,7 +48,12 @@ def test_log_stream_redaction():
     test_code = "772819"
     test_token = "O8Ps2PD6LuNmRpjnbBY_w3ht43C3yEJk4CJV7x6CwGrqJk"
 
-    test_logger.warning("Authentication failed for email=%s with code=%s and token=%s", test_email, test_code, test_token)
+    test_logger.warning(
+        "Authentication failed for email=%s with code=%s and token=%s",
+        test_email,
+        test_code,
+        test_token,
+    )
     handler.flush()
 
     log_output = stream.getvalue()

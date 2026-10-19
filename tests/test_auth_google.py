@@ -27,7 +27,11 @@ def test_google_auth_audience_rejection_and_success(client: TestClient, db_sessi
     # 2. Test successful Google signup with valid audience and FPL team ID
     with (
         patch("fpl_lens.api.routes.auth.verify_google_id_token") as mock_verify,
-        patch("fpl_lens.api.routes.auth.check_fpl_team_exists", new_callable=AsyncMock, return_value=True),
+        patch(
+            "fpl_lens.api.routes.auth.check_fpl_team_exists",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
     ):
         mock_verify.return_value = {
             "sub": f"google-sub-{tag}",

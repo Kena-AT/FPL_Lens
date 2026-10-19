@@ -23,7 +23,9 @@ def parse_strict_numeric(value: Any, field_name: str) -> Decimal:
     if isinstance(value, str):
         cleaned = value.strip()
         if not cleaned:
-            raise ValueError(f"Required numeric field '{field_name}' is empty (never defaulted to zero)")
+            raise ValueError(
+                f"Required numeric field '{field_name}' is empty (never defaulted to zero)"
+            )
         try:
             parsed = Decimal(cleaned)
             if parsed.is_nan() or parsed.is_infinite():

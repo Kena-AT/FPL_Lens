@@ -24,7 +24,11 @@ def test_registration_and_unverified_restrictions(client: TestClient, db_session
 
     with (
         patch("fpl_lens.services.mailer._send_smtp_message"),
-        patch("fpl_lens.api.routes.auth.check_fpl_team_exists", new_callable=AsyncMock, return_value=True),
+        patch(
+            "fpl_lens.api.routes.auth.check_fpl_team_exists",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
     ):
         resp = client.post("/api/v1/auth/register", json=reg_payload)
         assert resp.status_code == 201
@@ -39,7 +43,11 @@ def test_registration_and_unverified_restrictions(client: TestClient, db_session
     # 2. Test user enumeration limit: re-registering same email returns identical response
     with (
         patch("fpl_lens.services.mailer._send_smtp_message"),
-        patch("fpl_lens.api.routes.auth.check_fpl_team_exists", new_callable=AsyncMock, return_value=True),
+        patch(
+            "fpl_lens.api.routes.auth.check_fpl_team_exists",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
     ):
         dup_email_payload = {
             "email": email,
@@ -58,7 +66,9 @@ def test_registration_and_unverified_restrictions(client: TestClient, db_session
         "display_name": "Different Name",
         "fpl_team_id": base_team,
     }
-    with patch("fpl_lens.api.routes.auth.check_fpl_team_exists", new_callable=AsyncMock, return_value=True):
+    with patch(
+        "fpl_lens.api.routes.auth.check_fpl_team_exists", new_callable=AsyncMock, return_value=True
+    ):
         dup_team_resp = client.post("/api/v1/auth/register", json=dup_team_payload)
         assert dup_team_resp.status_code == 409
         assert dup_team_resp.json()["error"]["code"] == "FPL_TEAM_ALREADY_REGISTERED"

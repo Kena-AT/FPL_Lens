@@ -70,10 +70,17 @@ def test_fpl_proxy_cache_and_stale_fallback(client: TestClient, db_session: Sess
     token = create_access_token(user)
     headers = {"Authorization": f"Bearer {token}"}
 
-    mock_entry = {"id": team_id, "name": "Winning Squad", "player_first_name": "Test", "player_last_name": "User"}
+    mock_entry = {
+        "id": team_id,
+        "name": "Winning Squad",
+        "player_first_name": "Test",
+        "player_last_name": "User",
+    }
 
     # 1. Fresh fetch populates cache
-    with patch("fpl_lens.services.fpl_client.fpl_client.get_entry", new_callable=AsyncMock) as mock_get:
+    with patch(
+        "fpl_lens.services.fpl_client.fpl_client.get_entry", new_callable=AsyncMock
+    ) as mock_get:
         mock_get.return_value = mock_entry
         resp = client.get(f"/api/v1/fpl/entry/{team_id}", headers=headers)
         assert resp.status_code == 200
@@ -82,7 +89,9 @@ def test_fpl_proxy_cache_and_stale_fallback(client: TestClient, db_session: Sess
         assert mock_get.call_count == 1
 
     # 2. Second request is served directly from cache (upstream not called)
-    with patch("fpl_lens.services.fpl_client.fpl_client.get_entry", new_callable=AsyncMock) as mock_get2:
+    with patch(
+        "fpl_lens.services.fpl_client.fpl_client.get_entry", new_callable=AsyncMock
+    ) as mock_get2:
         resp2 = client.get(f"/api/v1/fpl/entry/{team_id}", headers=headers)
         assert resp2.status_code == 200
         assert resp2.json()["name"] == "Winning Squad"
@@ -138,14 +147,30 @@ def test_fpl_proxy_squad_history_transfers_success(client: TestClient, db_sessio
     token = create_access_token(user)
     headers = {"Authorization": f"Bearer {token}"}
 
-    mock_picks = {"active_chip": None, "entry_history": {}, "picks": [{"element": 1, "position": 1, "multiplier": 1}]}
+    mock_picks = {
+        "active_chip": None,
+        "entry_history": {},
+        "picks": [{"element": 1, "position": 1, "multiplier": 1}],
+    }
     mock_history = {"current": [{"event": 1, "points": 65}], "past": [], "chips": []}
     mock_transfers = [{"element_in": 10, "element_out": 20, "event": 2}]
 
     with (
-        patch("fpl_lens.services.fpl_client.fpl_client.get_picks", new_callable=AsyncMock, return_value=mock_picks),
-        patch("fpl_lens.services.fpl_client.fpl_client.get_history", new_callable=AsyncMock, return_value=mock_history),
-        patch("fpl_lens.services.fpl_client.fpl_client.get_transfers", new_callable=AsyncMock, return_value=mock_transfers),
+        patch(
+            "fpl_lens.services.fpl_client.fpl_client.get_picks",
+            new_callable=AsyncMock,
+            return_value=mock_picks,
+        ),
+        patch(
+            "fpl_lens.services.fpl_client.fpl_client.get_history",
+            new_callable=AsyncMock,
+            return_value=mock_history,
+        ),
+        patch(
+            "fpl_lens.services.fpl_client.fpl_client.get_transfers",
+            new_callable=AsyncMock,
+            return_value=mock_transfers,
+        ),
     ):
         resp_squad = client.get(f"/api/v1/fpl/entry/{team_id}/squad?gw=1", headers=headers)
         assert resp_squad.status_code == 200

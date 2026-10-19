@@ -36,7 +36,11 @@ def test_audit_events_and_log_redaction_for_auth(client: TestClient, db_session:
 
     with (
         patch("fpl_lens.services.mailer._send_smtp_message"),
-        patch("fpl_lens.api.routes.auth.check_fpl_team_exists", new_callable=AsyncMock, return_value=True),
+        patch(
+            "fpl_lens.api.routes.auth.check_fpl_team_exists",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
     ):
         client.post("/api/v1/auth/register", json=reg_payload)
 

@@ -128,7 +128,12 @@ def get_current_gameweek(db: Session = Depends(get_db)) -> JSONResponse:
 
     if not current_gw and not next_gw:
         # Fallback to earliest unfinished gameweek
-        next_gw = db.query(Gameweek).filter(Gameweek.finished.is_(False)).order_by(Gameweek.id.asc()).first()
+        next_gw = (
+            db.query(Gameweek)
+            .filter(Gameweek.finished.is_(False))
+            .order_by(Gameweek.id.asc())
+            .first()
+        )
 
     def serialize_gw(gw: Gameweek | None) -> dict[str, Any] | None:
         if not gw:

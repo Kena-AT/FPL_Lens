@@ -5,6 +5,7 @@ Revises:
 Create Date: 2026-10-12 14:35:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -22,7 +23,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     # 0. Extensions
     op.execute("CREATE EXTENSION IF NOT EXISTS citext;")
-    op.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";")
+    op.execute('CREATE EXTENSION IF NOT EXISTS "pgcrypto";')
 
     # 1. Enums
     player_position_enum = postgresql.ENUM("GK", "DEF", "MID", "FWD", name="player_position")
@@ -31,7 +32,12 @@ def upgrade() -> None:
     # 2. users
     op.create_table(
         "users",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column("email", postgresql.CITEXT(), unique=True, nullable=True),
         sa.Column("email_verified_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("password_hash", sa.Text(), nullable=True),
@@ -41,69 +47,132 @@ def upgrade() -> None:
         sa.Column("failed_login_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("locked_until", sa.DateTime(timezone=True), nullable=True),
         sa.Column("deletion_requested_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
 
     # 3. auth_identities
     op.create_table(
         "auth_identities",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("provider", sa.String(length=16), nullable=False),
         sa.Column("provider_subject", sa.String(length=255), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.UniqueConstraint("provider", "provider_subject", name="uq_identity"),
     )
 
     # 4. email_codes
     op.create_table(
         "email_codes",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("purpose", sa.String(length=16), nullable=False),
         sa.Column("code_hash", sa.LargeBinary(), nullable=False),
         sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("used_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("idx_email_codes_user", "email_codes", ["user_id", sa.text("created_at DESC")])
 
     # 5. refresh_tokens
     op.create_table(
         "refresh_tokens",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("family_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("token_hash", sa.LargeBinary(), nullable=False, unique=True),
-        sa.Column("issued_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "issued_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("replaced_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("refresh_tokens.id"), nullable=True),
+        sa.Column(
+            "replaced_by",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("refresh_tokens.id"),
+            nullable=True,
+        ),
     )
     op.create_index("idx_refresh_family", "refresh_tokens", ["family_id"])
 
     # 6. devices
     op.create_table(
         "devices",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("fcm_token", sa.Text(), nullable=False, unique=True),
         sa.Column("platform", sa.String(length=16), nullable=False, server_default="android"),
-        sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "last_seen_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("idx_devices_user", "devices", ["user_id"])
 
     # 7. notification_preferences
     op.create_table(
         "notification_preferences",
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
-        sa.Column("deadline_reminders", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
+        sa.Column(
+            "deadline_reminders", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
         sa.Column("injury_alerts", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("deadline_reminder_hours", sa.Integer(), nullable=False, server_default="6"),
-        sa.CheckConstraint("deadline_reminder_hours IN (1, 3, 6, 12, 24)", name="ck_deadline_reminder_hours"),
+        sa.CheckConstraint(
+            "deadline_reminder_hours IN (1, 3, 6, 12, 24)", name="ck_deadline_reminder_hours"
+        ),
     )
 
     # 8. teams
@@ -116,7 +185,9 @@ def upgrade() -> None:
         sa.Column("strength_attack_away", sa.Integer(), nullable=False),
         sa.Column("strength_defence_home", sa.Integer(), nullable=False),
         sa.Column("strength_defence_away", sa.Integer(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
 
     # 9. players
@@ -126,7 +197,11 @@ def upgrade() -> None:
         sa.Column("first_name", sa.String(length=64), nullable=False),
         sa.Column("second_name", sa.String(length=64), nullable=False),
         sa.Column("web_name", sa.String(length=64), nullable=False),
-        sa.Column("position", postgresql.ENUM("GK", "DEF", "MID", "FWD", name="player_position", create_type=False), nullable=False),
+        sa.Column(
+            "position",
+            postgresql.ENUM("GK", "DEF", "MID", "FWD", name="player_position", create_type=False),
+            nullable=False,
+        ),
         sa.Column("team_fpl_id", sa.Integer(), sa.ForeignKey("teams.fpl_id"), nullable=False),
         sa.Column("now_cost", sa.Integer(), nullable=False),
         sa.Column("status", sa.String(length=2), nullable=False),
@@ -135,7 +210,9 @@ def upgrade() -> None:
         sa.Column("news_added_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("expected_goals_season", sa.Numeric(precision=7, scale=3), nullable=True),
         sa.Column("expected_assists_season", sa.Numeric(precision=7, scale=3), nullable=True),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("idx_players_team", "players", ["team_fpl_id"])
 
@@ -149,7 +226,13 @@ def upgrade() -> None:
         sa.Column("is_current", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("is_next", sa.Boolean(), nullable=False, server_default=sa.text("false")),
     )
-    op.create_index("uq_gw_current", "gameweeks", ["is_current"], unique=True, postgresql_where=sa.text("is_current = true"))
+    op.create_index(
+        "uq_gw_current",
+        "gameweeks",
+        ["is_current"],
+        unique=True,
+        postgresql_where=sa.text("is_current = true"),
+    )
 
     # 11. fixtures
     op.create_table(
@@ -162,7 +245,9 @@ def upgrade() -> None:
         sa.Column("finished", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("home_score", sa.Integer(), nullable=True),
         sa.Column("away_score", sa.Integer(), nullable=True),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("idx_fixtures_gw", "fixtures", ["gameweek"])
 
@@ -187,7 +272,9 @@ def upgrade() -> None:
         sa.Column("source_fetched_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("player_fpl_id", "fixture_fpl_id"),
     )
-    op.create_index("idx_pfs_player_gw", "player_fixture_stats", ["player_fpl_id", sa.text("gameweek DESC")])
+    op.create_index(
+        "idx_pfs_player_gw", "player_fixture_stats", ["player_fpl_id", sa.text("gameweek DESC")]
+    )
 
     # 13. model_versions
     op.create_table(
@@ -195,28 +282,55 @@ def upgrade() -> None:
         sa.Column("version", sa.String(length=32), primary_key=True),
         sa.Column("config", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="shadow"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.Column("notes", sa.Text(), nullable=True),
     )
-    op.create_index("uq_model_active", "model_versions", ["status"], unique=True, postgresql_where=sa.text("status = 'active'"))
+    op.create_index(
+        "uq_model_active",
+        "model_versions",
+        ["status"],
+        unique=True,
+        postgresql_where=sa.text("status = 'active'"),
+    )
 
     # 14. projection_runs
     op.create_table(
         "projection_runs",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column("gameweek", sa.Integer(), sa.ForeignKey("gameweeks.id"), nullable=False),
-        sa.Column("model_version", sa.String(length=32), sa.ForeignKey("model_versions.version"), nullable=False),
+        sa.Column(
+            "model_version",
+            sa.String(length=32),
+            sa.ForeignKey("model_versions.version"),
+            nullable=False,
+        ),
         sa.Column("input_hash", sa.LargeBinary(), nullable=False),
         sa.Column("inputs_as_of", sa.DateTime(timezone=True), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.UniqueConstraint("gameweek", "model_version", "input_hash", name="uq_projection_run_inputs"),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.UniqueConstraint(
+            "gameweek", "model_version", "input_hash", name="uq_projection_run_inputs"
+        ),
     )
 
     # 15. player_projections
     op.create_table(
         "player_projections",
-        sa.Column("run_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("projection_runs.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "run_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("projection_runs.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("player_fpl_id", sa.Integer(), sa.ForeignKey("players.fpl_id"), nullable=False),
         sa.Column("fixture_fpl_id", sa.Integer(), sa.ForeignKey("fixtures.fpl_id"), nullable=False),
         sa.Column("availability", sa.Numeric(precision=4, scale=3), nullable=False),
@@ -240,8 +354,15 @@ def upgrade() -> None:
     op.create_table(
         "published_projections",
         sa.Column("gameweek", sa.Integer(), sa.ForeignKey("gameweeks.id"), primary_key=True),
-        sa.Column("run_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("projection_runs.id"), nullable=False),
-        sa.Column("published_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "run_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("projection_runs.id"),
+            nullable=False,
+        ),
+        sa.Column(
+            "published_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.Column("bundle_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     )
 
@@ -270,7 +391,9 @@ def upgrade() -> None:
     op.create_table(
         "audit_events",
         sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "occurred_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.Column("actor_type", sa.String(length=16), nullable=False),
         sa.Column("actor_id", sa.String(length=64), nullable=True),
         sa.Column("action", sa.String(length=48), nullable=False),

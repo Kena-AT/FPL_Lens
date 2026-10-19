@@ -10,7 +10,6 @@ from fpl_lens.api.errors import (
     unhandled_exception_handler,
     validation_exception_handler,
 )
-from fpl_lens.config import settings
 from fpl_lens.api.middleware import RequestIdMiddleware
 from fpl_lens.api.routes.auth import router as auth_router
 from fpl_lens.api.routes.devices import router as devices_router
@@ -19,6 +18,7 @@ from fpl_lens.api.routes.health import router as health_router
 from fpl_lens.api.routes.internal_jobs import router as internal_jobs_router
 from fpl_lens.api.routes.me import router as me_router
 from fpl_lens.api.routes.projections import router as projections_router
+from fpl_lens.config import settings
 
 
 def create_app() -> FastAPI:
@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
     # Register middleware
     if settings.is_dev:
         from fastapi.middleware.cors import CORSMiddleware
+
         app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],

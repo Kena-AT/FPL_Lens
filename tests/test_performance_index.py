@@ -17,7 +17,13 @@ from fpl_lens.engine.performance_index import (
 
 def test_performance_index_determinism_and_bounds():
     starters = [
-        StarterInput(player_id=i, xp=2.0 + i * 0.5, p_start=0.5 + i * 0.04, form=3.0 + (i % 3), ppg=3.5 + (i % 2))
+        StarterInput(
+            player_id=i,
+            xp=2.0 + i * 0.5,
+            p_start=0.5 + i * 0.04,
+            form=3.0 + (i % 3),
+            ppg=3.5 + (i % 2),
+        )
         for i in range(1, 12)
     ]
     res1 = calculate_performance_index(starters)
@@ -35,8 +41,7 @@ def test_performance_index_determinism_and_bounds():
 
 def test_performance_index_missing_mandatory_data_returns_none():
     starters = [
-        StarterInput(player_id=i, xp=3.0, p_start=0.8, form=4.0, ppg=4.0)
-        for i in range(1, 12)
+        StarterInput(player_id=i, xp=3.0, p_start=0.8, form=4.0, ppg=4.0) for i in range(1, 12)
     ]
     # Set one starter's xp to None
     starters[5] = StarterInput(player_id=6, xp=None, p_start=0.8, form=4.0, ppg=4.0)
@@ -49,8 +54,7 @@ def test_performance_index_missing_mandatory_data_returns_none():
 
 def test_performance_index_partial_when_descriptive_missing():
     starters = [
-        StarterInput(player_id=i, xp=3.0 + i, p_start=0.8, form=4.0, ppg=4.0)
-        for i in range(1, 12)
+        StarterInput(player_id=i, xp=3.0 + i, p_start=0.8, form=4.0, ppg=4.0) for i in range(1, 12)
     ]
     # Missing form for player 3
     starters[2] = StarterInput(player_id=3, xp=5.0, p_start=0.8, form=None, ppg=4.0)
@@ -94,16 +98,18 @@ def test_performance_index_backtest_outscores_chance_over_ten_gameweeks():
             p_start = 0.9 if recent_mins > 180 else (0.5 if recent_mins > 60 else 0.2)
             xp = ppg * (1.1 if target_match["was_home"] else 0.9)
 
-            records_by_gw.setdefault(gw, []).append({
-                "id": p["element"],
-                "pos": p["position"],
-                "team": p["team"],
-                "xp": xp,
-                "p_start": p_start,
-                "form": form,
-                "ppg": ppg,
-                "actual_pts": int(target_match["total_points"]),
-            })
+            records_by_gw.setdefault(gw, []).append(
+                {
+                    "id": p["element"],
+                    "pos": p["position"],
+                    "team": p["team"],
+                    "xp": xp,
+                    "p_start": p_start,
+                    "form": form,
+                    "ppg": ppg,
+                    "actual_pts": int(target_match["total_points"]),
+                }
+            )
 
     rng = random.Random(999)
     gws_above_chance = 0
@@ -119,19 +125,29 @@ def test_performance_index_backtest_outscores_chance_over_ten_gameweeks():
         trials = 50
 
         for _ in range(trials):
-            squad = rng.sample(gks, 2) + rng.sample(defs, 5) + rng.sample(mids, 5) + rng.sample(fwds, 3)
+            squad = (
+                rng.sample(gks, 2) + rng.sample(defs, 5) + rng.sample(mids, 5) + rng.sample(fwds, 3)
+            )
             # Pick 11 starters (1 GK, 3 DEF, 4 MID, 3 FWD)
             starters = [squad[0]] + squad[2:5] + squad[7:11] + squad[12:15]
 
             starter_inputs = [
-                StarterInput(player_id=p["id"], xp=p["xp"], p_start=p["p_start"], form=p["form"], ppg=p["ppg"])
+                StarterInput(
+                    player_id=p["id"],
+                    xp=p["xp"],
+                    p_start=p["p_start"],
+                    form=p["form"],
+                    ppg=p["ppg"],
+                )
                 for p in starters
             ]
             poi_results = calculate_performance_index(starter_inputs)
             assert poi_results is not None
 
             # Rank starters by POI
-            ranked = sorted(zip(poi_results, starters, strict=False), key=lambda x: x[0].poi, reverse=True)
+            ranked = sorted(
+                zip(poi_results, starters, strict=False), key=lambda x: x[0].poi, reverse=True
+            )
             top_5 = ranked[:5]
 
             avg_top = sum(p["actual_pts"] for _, p in top_5) / len(top_5)
@@ -145,4 +161,6 @@ def test_performance_index_backtest_outscores_chance_over_ten_gameweeks():
 
     # Over at least 10 gameweeks, must outscore squad average more often than chance (> 50%)
     fraction_above_chance = gws_above_chance / len(test_gws)
-    assert fraction_above_chance > 0.50, f"Only {gws_above_chance}/{len(test_gws)} gameweeks outscored chance"
+    assert fraction_above_chance > 0.50, (
+        f"Only {gws_above_chance}/{len(test_gws)} gameweeks outscored chance"
+    )
