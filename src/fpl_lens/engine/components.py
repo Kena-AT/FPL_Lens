@@ -9,6 +9,7 @@ from fpl_lens.engine.types import PlayerMatchHistory, PlayingTimeScenarios, Proj
 
 class ProjectionValidationError(ValueError):
     """Raised when an expected points component or final value violates configured bounds."""
+
     pass
 
 
@@ -94,9 +95,8 @@ def calculate_clean_sheet_points(
     if w_cs <= 0.0:
         return 0.0
 
-    cs_prob = (
-        pt.p_sc * math.exp(-lambda_conceded * (pt.m_sc / 90.0))
-        + pt.p_se * math.exp(-lambda_conceded * (pt.m_se / 90.0))
+    cs_prob = pt.p_sc * math.exp(-lambda_conceded * (pt.m_sc / 90.0)) + pt.p_se * math.exp(
+        -lambda_conceded * (pt.m_se / 90.0)
     )
     return w_cs * cs_prob
 
@@ -181,13 +181,21 @@ def calculate_defensive_contributions(
 
         # 60+ band empirical rate shrunk to prior
         k_60 = len(apps_60)
-        emp_60 = sum(1 for h in apps_60 if h.defensive_contributions > 0) / k_60 if k_60 > 0 else priors["60_plus"]
+        emp_60 = (
+            sum(1 for h in apps_60 if h.defensive_contributions > 0) / k_60
+            if k_60 > 0
+            else priors["60_plus"]
+        )
         w_60 = k_60 / (k_60 + shrinkage_weight)
         rate_60 = w_60 * emp_60 + (1.0 - w_60) * priors["60_plus"]
 
         # under 60 band empirical rate shrunk to prior
         k_under = len(apps_under)
-        emp_under = sum(1 for h in apps_under if h.defensive_contributions > 0) / k_under if k_under > 0 else priors["under_60"]
+        emp_under = (
+            sum(1 for h in apps_under if h.defensive_contributions > 0) / k_under
+            if k_under > 0
+            else priors["under_60"]
+        )
         w_under = k_under / (k_under + shrinkage_weight)
         rate_under = w_under * emp_under + (1.0 - w_under) * priors["under_60"]
     else:
@@ -311,7 +319,9 @@ def compute_projection_components(
         position=position,
     )
     exp_cs = calculate_clean_sheet_points(pt, lambda_conceded=lambda_conceded, position=position)
-    exp_gc = calculate_goals_conceded_penalty(pt, lambda_conceded=lambda_conceded, position=position)
+    exp_gc = calculate_goals_conceded_penalty(
+        pt, lambda_conceded=lambda_conceded, position=position
+    )
     exp_dc = calculate_defensive_contributions(pt, position=position, history=history)
     exp_bonus = calculate_bonus(pt, position=position)
     exp_cards = calculate_card_penalty(pt, position=position)

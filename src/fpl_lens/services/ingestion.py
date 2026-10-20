@@ -62,7 +62,9 @@ def _finish_ingestion_run(
     db.commit()
 
 
-async def run_bootstrap_job(db: Session, bootstrap_data: dict[str, Any] | None = None) -> dict[str, Any]:
+async def run_bootstrap_job(
+    db: Session, bootstrap_data: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """
     Ingests FPL bootstrap-static: teams, gameweeks (events), and players (elements).
     Validates each record against Pydantic schemas.
@@ -143,7 +145,9 @@ async def run_bootstrap_job(db: Session, bootstrap_data: dict[str, Any] | None =
         if event_values:
             has_current = any(v.get("is_current") for v in event_values)
             if has_current:
-                db.query(Gameweek).filter(Gameweek.is_current.is_(True)).update({"is_current": False})
+                db.query(Gameweek).filter(Gameweek.is_current.is_(True)).update(
+                    {"is_current": False}
+                )
                 db.flush()
 
             stmt = insert(Gameweek).values(event_values)
@@ -222,7 +226,11 @@ async def run_bootstrap_job(db: Session, bootstrap_data: dict[str, Any] | None =
         set_cached_value(
             db,
             "fpl:bootstrap",
-            {"events": len(data.get("events", [])), "teams": len(data.get("teams", [])), "elements": len(data.get("elements", []))},
+            {
+                "events": len(data.get("events", [])),
+                "teams": len(data.get("teams", [])),
+                "elements": len(data.get("elements", [])),
+            },
             ttl_seconds=1800,
         )
 
@@ -236,6 +244,7 @@ async def run_bootstrap_job(db: Session, bootstrap_data: dict[str, Any] | None =
         if total_written > 0:
             try:
                 from fpl_lens.engine.service import run_projection_job
+
                 run_projection_job(db)
             except Exception as e:  # noqa: BLE001
                 logger.error("Projection job triggered after bootstrap failed: %s", e)
@@ -255,7 +264,9 @@ async def run_bootstrap_job(db: Session, bootstrap_data: dict[str, Any] | None =
         raise
 
 
-async def run_fixtures_job(db: Session, fixtures_data: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+async def run_fixtures_job(
+    db: Session, fixtures_data: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
     """
     Ingests FPL fixtures.
     Validates each fixture against FPLFixtureSchema.
@@ -411,20 +422,29 @@ async def run_history_job(
 
                 db.flush()
 
-            except (httpx.HTTPError, UpstreamUnavailableError, SQLAlchemyError, ValueError, ValidationError) as exc:
+            except (
+                httpx.HTTPError,
+                UpstreamUnavailableError,
+                SQLAlchemyError,
+                ValueError,
+                ValidationError,
+            ) as exc:
                 failed_records += 1
                 logger.error("Failed fetching or processing summary for player %d: %s", pid, exc)
 
         db.commit()
 
         status_result = "PARTIAL" if failed_records > 0 else "OK"
-        summary = f"{failed_records} history records failed validation" if failed_records > 0 else None
+        summary = (
+            f"{failed_records} history records failed validation" if failed_records > 0 else None
+        )
         _finish_ingestion_run(db, run, status_result, total_written, summary)
 
         # Trigger projection job if data was written per Sprint 6
         if total_written > 0:
             try:
                 from fpl_lens.engine.service import run_projection_job
+
                 run_projection_job(db)
             except Exception as e:  # noqa: BLE001
                 logger.error("Projection job triggered after history failed: %s", e)

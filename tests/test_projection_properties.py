@@ -25,7 +25,11 @@ def test_scenario_probabilities_sum_to_one_and_non_negative():
         history = []
         for gw in range(1, num_matches + 1):
             started = rng.choice([True, False])
-            mins = rng.randint(60, 95) if started else (rng.randint(0, 45) if rng.random() > 0.3 else 0)
+            mins = (
+                rng.randint(60, 95)
+                if started
+                else (rng.randint(0, 45) if rng.random() > 0.3 else 0)
+            )
             history.append(
                 PlayerMatchHistory(
                     gameweek=gw,

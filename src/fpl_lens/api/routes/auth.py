@@ -74,23 +74,80 @@ async def register(
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
-    # 3. One account per FPL team ID rule
-    team_stmt = select(User).where(User.fpl_team_id == payload.fpl_team_id)
-    if db.execute(team_stmt).scalar_one_or_none():
-        raise AppError(
-            code="FPL_TEAM_ALREADY_REGISTERED",
-            message="This FPL team ID is already registered to an account",
-            status_code=status.HTTP_409_CONFLICT,
-        )
-
-    # 4. Limit user enumeration: return identical response if email exists
+    # 3. Check existing account by email or team ID
     email_stmt = select(User).where(User.email == payload.email)
     existing_user = db.execute(email_stmt).scalar_one_or_none()
-    if existing_user:
-        logger.info("Registration attempt for already registered email.")
-        return {"message": "Registration successful. Please check your email for the verification code."}
 
-    # 5. Create unverified account
+    team_stmt = select(User).where(User.fpl_team_id == payload.fpl_team_id)
+    team_user = db.execute(team_stmt).scalar_one_or_none()
+
+    # If user already registered but is unverified: allow them to update and re-send code!
+    if existing_user and existing_user.status == "unverified":
+        if team_user and team_user.id != existing_user.id:
+            now = datetime.now(UTC)
+            if team_user.status == "active" or (
+                team_user.created_at and team_user.created_at >= now - timedelta(hours=24)
+            ):
+                raise AppError(
+                    code="FPL_TEAM_ALREADY_REGISTERED",
+                    message="This FPL team ID is already registered to an account",
+                    status_code=status.HTTP_409_CONFLICT,
+                )
+        existing_user.password_hash = hash_password(payload.password)
+        existing_user.display_name = payload.display_name
+        existing_user.fpl_team_id = payload.fpl_team_id
+        db.commit()
+
+        code = create_and_store_email_code(
+            db, user_id=existing_user.id, purpose="verify_email", expiry_minutes=10
+        )
+        await send_verification_email(existing_user.email, code, expiry_minutes=10)
+
+        access_token = create_access_token(existing_user)
+        raw_refresh, _ = issue_refresh_token(db, existing_user.id)
+
+        record_audit_event(
+            db=db,
+            action="registration_retry",
+            actor_id=str(existing_user.id),
+            target_id=str(existing_user.id),
+            ip=client_ip,
+        )
+
+        return {
+            "message": "Registration successful. Please check your email for the verification code.",
+            "access_token": access_token,
+            "refresh_token": raw_refresh,
+            "token_type": "Bearer",
+            "expires_in": 900,
+        }
+
+    # Limit user enumeration: return identical response if email exists and is active
+    if existing_user and existing_user.status == "active":
+        logger.info("Registration attempt for already registered active email.")
+        return {
+            "message": "Registration successful. Please check your email for the verification code."
+        }
+
+    # One account per FPL team ID rule
+    if team_user:
+        now = datetime.now(UTC)
+        if (
+            team_user.status == "unverified"
+            and team_user.created_at
+            and team_user.created_at < now - timedelta(hours=24)
+        ):
+            # Abandoned unverified registration older than 24h: reclaim
+            db.delete(team_user)
+            db.commit()
+        else:
+            raise AppError(
+                code="FPL_TEAM_ALREADY_REGISTERED",
+                message="This FPL team ID is already registered to an account",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+
+    # 4. Create unverified account
     user_id = uuid.uuid4()
     new_user = User(
         id=user_id,
@@ -114,10 +171,16 @@ async def register(
     db.commit()
 
     # 6. Generate 6-digit code and dispatch email
-    code = create_and_store_email_code(db, user_id=user_id, purpose="verify_email", expiry_minutes=10)
+    code = create_and_store_email_code(
+        db, user_id=user_id, purpose="verify_email", expiry_minutes=10
+    )
     await send_verification_email(new_user.email, code, expiry_minutes=10)
 
-    # 7. Record audit event
+    # 7. Issue access and refresh tokens so the client can authorize /verify-email and /verify-email/resend
+    access_token = create_access_token(new_user)
+    raw_refresh, _ = issue_refresh_token(db, new_user.id)
+
+    # 8. Record audit event
     record_audit_event(
         db=db,
         action="registration",
@@ -126,7 +189,13 @@ async def register(
         ip=client_ip,
     )
 
-    return {"message": "Registration successful. Please check your email for the verification code."}
+    return {
+        "message": "Registration successful. Please check your email for the verification code.",
+        "access_token": access_token,
+        "refresh_token": raw_refresh,
+        "token_type": "Bearer",
+        "expires_in": 900,
+    }
 
 
 @router.post("/verify-email", response_model=TokenResponse)
@@ -204,13 +273,10 @@ async def resend_verification_email(
     one_hour_ago = now - timedelta(hours=1)
 
     # Check 1 per minute
-    recent_stmt = (
-        select(EmailCode)
-        .where(
-            EmailCode.user_id == current_user.id,
-            EmailCode.purpose == "verify_email",
-            EmailCode.created_at >= one_min_ago,
-        )
+    recent_stmt = select(EmailCode).where(
+        EmailCode.user_id == current_user.id,
+        EmailCode.purpose == "verify_email",
+        EmailCode.created_at >= one_min_ago,
     )
     if db.execute(recent_stmt).first():
         raise AppError(
@@ -220,13 +286,10 @@ async def resend_verification_email(
         )
 
     # Check 5 per hour
-    count_stmt = (
-        select(func.count(EmailCode.id))
-        .where(
-            EmailCode.user_id == current_user.id,
-            EmailCode.purpose == "verify_email",
-            EmailCode.created_at >= one_hour_ago,
-        )
+    count_stmt = select(func.count(EmailCode.id)).where(
+        EmailCode.user_id == current_user.id,
+        EmailCode.purpose == "verify_email",
+        EmailCode.created_at >= one_hour_ago,
     )
     hour_count = db.execute(count_stmt).scalar() or 0
     if hour_count >= 5:
@@ -367,12 +430,9 @@ async def google_auth(
     google_name = claims.get("name") or "Google User"
 
     # Check if Google identity already linked
-    stmt = (
-        select(AuthIdentity)
-        .where(
-            AuthIdentity.provider == "google",
-            AuthIdentity.provider_subject == google_sub,
-        )
+    stmt = select(AuthIdentity).where(
+        AuthIdentity.provider == "google",
+        AuthIdentity.provider_subject == google_sub,
     )
     auth_identity = db.execute(stmt).scalar_one_or_none()
 

@@ -25,7 +25,12 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             response.headers["X-Request-ID"] = request_id
-            logger.info("Request completed: %s %s - status %d", request.method, request.url.path, response.status_code)
+            logger.info(
+                "Request completed: %s %s - status %d",
+                request.method,
+                request.url.path,
+                response.status_code,
+            )
             return response
         finally:
             request_id_ctx.reset(token)

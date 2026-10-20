@@ -32,10 +32,11 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
 
     final totalSquadValueTenths = players.fold<int>(
       0,
-      (sum, p) => sum + p.sellingPriceTenths,
+      (sum, p) => sum + p.nowCostTenths,
     );
-    final effectiveSquadValue =
-        totalSquadValueTenths > 0 ? totalSquadValueTenths : squadState.squadValueTenths;
+    final effectiveSquadValue = squadState.squadValueTenths > 0
+        ? squadState.squadValueTenths
+        : (totalSquadValueTenths > 0 ? totalSquadValueTenths : 1000);
 
     return Scaffold(
       backgroundColor: AppTokens.bgBase,
@@ -46,7 +47,7 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh squad',
             onPressed: () async {
-              final notice = await ref.read(squadNotifierProvider.notifier).refreshSquad();
+              final notice = await ref.read(squadNotifierProvider.notifier).refreshSquad(force: true);
               if (notice != null && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

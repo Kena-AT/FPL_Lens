@@ -16,7 +16,9 @@ def get_cached_value(db: Session, key: str) -> dict[str, Any] | list[Any] | None
     return entry.value if entry else None
 
 
-def get_stale_cached_value(db: Session, key: str) -> tuple[dict[str, Any] | list[Any], datetime] | None:
+def get_stale_cached_value(
+    db: Session, key: str
+) -> tuple[dict[str, Any] | list[Any], datetime] | None:
     """
     Returns the cached value and its expiration/timestamp even if expired.
     Used for stale fallback when FPL upstream is unavailable.

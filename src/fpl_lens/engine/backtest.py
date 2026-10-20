@@ -62,7 +62,6 @@ class BacktestResults:
     calibration_p_60_start: list[CalibrationBin] = field(default_factory=list)
 
 
-
 def compute_mae(predictions: list[float], actuals: list[float]) -> float:
     """Mean Absolute Error."""
     if not predictions:

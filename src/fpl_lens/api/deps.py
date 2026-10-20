@@ -112,4 +112,3 @@ def get_verified_user(
 
 
 get_current_active_user = get_verified_user
-

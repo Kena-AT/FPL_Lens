@@ -53,7 +53,9 @@ def register_device(
             id=str(existing_device.id),
             fcm_token=str(existing_device.fcm_token),
             platform=str(existing_device.platform),
-            created_at=existing_device.created_at.isoformat() if existing_device.created_at else now.isoformat(),
+            created_at=existing_device.created_at.isoformat()
+            if existing_device.created_at
+            else now.isoformat(),
         )
 
     device_id = uuid.uuid4()

@@ -138,11 +138,25 @@ def run():
     counts_starts = [b.count for b in p_start_bins if b.count > 0]
 
     ax.plot([0, 1], [0, 1], "k--", label="Perfect Calibration (y = x)")
-    ax.plot(pred_starts, obs_starts, "s-", color="#1E88E5", linewidth=2, markersize=8, label="Model P(Start)")
+    ax.plot(
+        pred_starts,
+        obs_starts,
+        "s-",
+        color="#1E88E5",
+        linewidth=2,
+        markersize=8,
+        label="Model P(Start)",
+    )
     for px, py, n in zip(pred_starts, obs_starts, counts_starts, strict=False):
-        ax.annotate(f"n={n:,}", (px, py), textcoords="offset points", xytext=(0, 8), ha="center", fontsize=8)
+        ax.annotate(
+            f"n={n:,}", (px, py), textcoords="offset points", xytext=(0, 8), ha="center", fontsize=8
+        )
 
-    ax.set_title("Calibration Plot: Probability of Starting P(Start)\nReal FPL 2023-24 Season (GW10–GW38)", fontsize=12, fontweight="bold")
+    ax.set_title(
+        "Calibration Plot: Probability of Starting P(Start)\nReal FPL 2023-24 Season (GW10–GW38)",
+        fontsize=12,
+        fontweight="bold",
+    )
     ax.set_xlabel("Predicted Probability P(Start)", fontsize=10)
     ax.set_ylabel("Observed Frequency of Starting", fontsize=10)
     ax.set_xlim(-0.05, 1.05)
@@ -163,11 +177,25 @@ def run():
     counts_60 = [b.count for b in p_60_bins if b.count > 0]
 
     ax.plot([0, 1], [0, 1], "k--", label="Perfect Calibration (y = x)")
-    ax.plot(pred_60, obs_60, "o-", color="#43A047", linewidth=2, markersize=8, label="Model P(60+ | start)")
+    ax.plot(
+        pred_60,
+        obs_60,
+        "o-",
+        color="#43A047",
+        linewidth=2,
+        markersize=8,
+        label="Model P(60+ | start)",
+    )
     for px, py, n in zip(pred_60, obs_60, counts_60, strict=False):
-        ax.annotate(f"n={n:,}", (px, py), textcoords="offset points", xytext=(0, 8), ha="center", fontsize=8)
+        ax.annotate(
+            f"n={n:,}", (px, py), textcoords="offset points", xytext=(0, 8), ha="center", fontsize=8
+        )
 
-    ax.set_title("Calibration Plot: P(60+ Minutes | Start)\nReal FPL 2023-24 Season (GW10–GW38)", fontsize=12, fontweight="bold")
+    ax.set_title(
+        "Calibration Plot: P(60+ Minutes | Start)\nReal FPL 2023-24 Season (GW10–GW38)",
+        fontsize=12,
+        fontweight="bold",
+    )
     ax.set_xlabel("Predicted Probability P(60+ | start)", fontsize=10)
     ax.set_ylabel("Observed Frequency of 60+ Minutes", fontsize=10)
     ax.set_xlim(-0.05, 1.05)

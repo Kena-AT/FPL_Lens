@@ -5,7 +5,9 @@ Team attacking and defensive intensities per Technical Specification §3.3.
 from fpl_lens.engine.types import TeamStrength
 
 
-def compute_league_averages(teams: list[TeamStrength], total_goals: int = 0, matches_played: int = 0) -> dict[str, float]:
+def compute_league_averages(
+    teams: list[TeamStrength], total_goals: int = 0, matches_played: int = 0
+) -> dict[str, float]:
     """
     Computes league-average goals per match mu and average strength components.
     mu = total_goals / (2 * matches_played), defaulting to 1.35 [PLACEHOLDER] if matches == 0.

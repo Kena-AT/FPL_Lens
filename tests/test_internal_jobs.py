@@ -85,7 +85,9 @@ async def test_full_bootstrap_and_fixtures_run(db_session: Session):
     assert fix_res["status"] == "OK"
     assert fix_res["rows_written"] == 380
 
-    fpl_fixtures = db_session.execute(select(Fixture).where(Fixture.fpl_id.between(1, 380))).scalars().all()
+    fpl_fixtures = (
+        db_session.execute(select(Fixture).where(Fixture.fpl_id.between(1, 380))).scalars().all()
+    )
     assert len(fpl_fixtures) == 380
 
     fix_run = db_session.query(IngestionRun).filter(IngestionRun.id == fix_res["run_id"]).first()
@@ -219,7 +221,9 @@ async def test_history_run_and_partial_failure(db_session: Session):
     assert res_partial["status"] == "PARTIAL"
     assert res_partial["failed_records"] == 1
 
-    run_row = db_session.query(IngestionRun).filter(IngestionRun.id == res_partial["run_id"]).first()
+    run_row = (
+        db_session.query(IngestionRun).filter(IngestionRun.id == res_partial["run_id"]).first()
+    )
     assert run_row is not None
     assert run_row.status == "PARTIAL"
     assert "1 history records failed validation" in run_row.error_summary

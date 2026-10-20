@@ -48,7 +48,9 @@ def test_backtest_over_ten_gameweeks_with_baselines_and_calibration():
             if starts:
                 mins = rng.randint(65, 90)
                 goals = 1 if (rng.random() < 0.25 * quality and pos in ("MID", "FWD")) else 0
-                assists = 1 if (rng.random() < 0.20 * quality and pos in ("MID", "FWD", "DEF")) else 0
+                assists = (
+                    1 if (rng.random() < 0.20 * quality and pos in ("MID", "FWD", "DEF")) else 0
+                )
                 cs = 1 if (rng.random() < 0.35 and pos in ("GK", "DEF")) else 0
                 gc = rng.randint(0, 2) if pos in ("GK", "DEF") else 0
             else:
@@ -158,8 +160,12 @@ def test_backtest_over_ten_gameweeks_with_baselines_and_calibration():
 
     # 3. Baseline comparison
     # Engine beats or matches points-per-game baseline on MAE
-    print(f"\nBacktest Results: Model MAE={results.overall_mae}, PPG MAE={results.ppg_baseline_mae}")
-    assert results.overall_mae <= results.ppg_baseline_mae + 0.5  # within margin or beating baseline
+    print(
+        f"\nBacktest Results: Model MAE={results.overall_mae}, PPG MAE={results.ppg_baseline_mae}"
+    )
+    assert (
+        results.overall_mae <= results.ppg_baseline_mae + 0.5
+    )  # within margin or beating baseline
 
     # 4. Bootstrap confidence intervals reported
     assert results.bootstrap_mae_ci[0] <= results.overall_mae <= results.bootstrap_mae_ci[1]
@@ -229,8 +235,16 @@ def test_backtest_on_real_historical_fpl_data():
             pt = calculate_playing_time(availability=avail, history=hist, position=pos)
 
             total_mins = sum(m["minutes"] for m in prior_matches)
-            xg_90 = (sum(m["expected_goals"] for m in prior_matches) / total_mins) * 90.0 if total_mins >= 90 else 0.1
-            xa_90 = (sum(m["expected_assists"] for m in prior_matches) / total_mins) * 90.0 if total_mins >= 90 else 0.1
+            xg_90 = (
+                (sum(m["expected_goals"] for m in prior_matches) / total_mins) * 90.0
+                if total_mins >= 90
+                else 0.1
+            )
+            xa_90 = (
+                (sum(m["expected_assists"] for m in prior_matches) / total_mins) * 90.0
+                if total_mins >= 90
+                else 0.1
+            )
 
             comp = compute_projection_components(
                 pt=pt,
@@ -275,4 +289,3 @@ def test_backtest_on_real_historical_fpl_data():
         pos_m = results.by_position[pos]
         assert pos_m.sample_size > 0
         assert pos_m.model_mae_ci[0] <= pos_m.model_mae <= pos_m.model_mae_ci[1]
-

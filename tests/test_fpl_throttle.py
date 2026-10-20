@@ -66,7 +66,9 @@ async def test_fpl_bootstrap_throttle_with_test_clock():
     async def fake_request(method, endpoint, **kwargs):
         nonlocal called_count
         called_count += 1
-        return type("MockResponse", (), {"status_code": 200, "json": lambda *args, **kwargs: {"teams": []}})()
+        return type(
+            "MockResponse", (), {"status_code": 200, "json": lambda *args, **kwargs: {"teams": []}}
+        )()
 
     client._request = fake_request
 

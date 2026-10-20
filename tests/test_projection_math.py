@@ -38,10 +38,7 @@ def test_availability_calculation():
 def test_playing_time_scenarios_and_rates():
     """Spec §3.2: 5-scenario partition and expected minutes."""
     # Player started 5 out of 5 matches with 90 min each
-    history = [
-        PlayerMatchHistory(gameweek=i, was_starter=True, minutes=90)
-        for i in range(1, 6)
-    ]
+    history = [PlayerMatchHistory(gameweek=i, was_starter=True, minutes=90) for i in range(1, 6)]
     pt = calculate_playing_time(
         availability=1.0,
         history=history,
@@ -100,10 +97,7 @@ def test_goals_and_assists_worked_example():
 
 def test_clean_sheet_points():
     """Spec §4.3: Clean sheet closed-form Poisson expression."""
-    history = [
-        PlayerMatchHistory(gameweek=i, was_starter=True, minutes=90)
-        for i in range(1, 6)
-    ]
+    history = [PlayerMatchHistory(gameweek=i, was_starter=True, minutes=90) for i in range(1, 6)]
     pt = calculate_playing_time(
         availability=1.0,
         history=history,
@@ -122,10 +116,7 @@ def test_clean_sheet_points():
 
 def test_goals_conceded_penalty_truncation():
     """Spec §4.4: Exact Poisson sum for GK and DEF."""
-    history = [
-        PlayerMatchHistory(gameweek=i, was_starter=True, minutes=90)
-        for i in range(1, 6)
-    ]
+    history = [PlayerMatchHistory(gameweek=i, was_starter=True, minutes=90) for i in range(1, 6)]
     pt = calculate_playing_time(
         availability=1.0,
         history=history,
@@ -142,9 +133,7 @@ def test_goals_conceded_penalty_truncation():
 
 def test_outfield_points_non_negative():
     """Spec §4: Outfield points must be non-negative."""
-    history = [
-        PlayerMatchHistory(gameweek=1, was_starter=True, minutes=90)
-    ]
+    history = [PlayerMatchHistory(gameweek=1, was_starter=True, minutes=90)]
     pt = calculate_playing_time(availability=1.0, history=history, position="FWD")
     components = compute_projection_components(
         pt=pt,
@@ -250,7 +239,9 @@ def test_goals_conceded_penalty_weighting_and_negative_sign():
     )
 
     lambda_conceded = 1.8
-    penalty_under_60 = calculate_goals_conceded_penalty(pt_under_60, lambda_conceded, position="DEF")
+    penalty_under_60 = calculate_goals_conceded_penalty(
+        pt_under_60, lambda_conceded, position="DEF"
+    )
     penalty_60_plus = calculate_goals_conceded_penalty(pt_60_plus, lambda_conceded, position="DEF")
 
     # 1. Negative sign confirmed (non-positive)
@@ -274,7 +265,9 @@ def test_goals_conceded_penalty_weighting_and_negative_sign():
     )
     assert comp_60.exp_goals_conceded < 0.0
     # Expected points = App (2.0) + CleanSheet + GC (negative) + DC + Bonus - Cards
-    assert comp_60.expected_points < 2.0 + comp_60.exp_clean_sheet + comp_60.exp_dc + comp_60.exp_bonus
+    assert (
+        comp_60.expected_points < 2.0 + comp_60.exp_clean_sheet + comp_60.exp_dc + comp_60.exp_bonus
+    )
 
 
 def test_projection_configured_output_bounds():
@@ -322,4 +315,3 @@ def test_projection_configured_output_bounds():
     )
     with pytest.raises(ProjectionValidationError, match="outside configured bounds"):
         validate_projection_output(excessive_goals, position="FWD")
-

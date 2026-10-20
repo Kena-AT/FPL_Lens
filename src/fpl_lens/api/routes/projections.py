@@ -128,7 +128,12 @@ def get_current_gameweek(db: Session = Depends(get_db)) -> JSONResponse:
 
     if not current_gw and not next_gw:
         # Fallback to earliest unfinished gameweek
-        next_gw = db.query(Gameweek).filter(Gameweek.finished.is_(False)).order_by(Gameweek.id.asc()).first()
+        next_gw = (
+            db.query(Gameweek)
+            .filter(Gameweek.finished.is_(False))
+            .order_by(Gameweek.id.asc())
+            .first()
+        )
 
     def serialize_gw(gw: Gameweek | None) -> dict[str, Any] | None:
         if not gw:
@@ -189,7 +194,7 @@ def get_fixtures(
 
 @router.get("/players/search")
 def search_players(
-    q: str = Query(..., min_length=1, description="Player name search query"),
+    q: str = Query(default="", min_length=0, description="Player name search query"),
     limit: int = Query(default=10, ge=1, le=50, description="Max results"),
     _: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -198,18 +203,22 @@ def search_players(
     Name lookup used for screenshot resolution and manual squad entry per Backend Design §11.2.
     Requires authenticated user.
     """
-    search_term = f"%{q.strip()}%"
-    stmt = (
-        select(Player)
-        .where(
-            or_(
-                Player.web_name.ilike(search_term),
-                Player.first_name.ilike(search_term),
-                Player.second_name.ilike(search_term),
+    clean_q = q.strip()
+    if clean_q:
+        search_term = f"%{clean_q}%"
+        stmt = (
+            select(Player)
+            .where(
+                or_(
+                    Player.web_name.ilike(search_term),
+                    Player.first_name.ilike(search_term),
+                    Player.second_name.ilike(search_term),
+                )
             )
+            .limit(limit)
         )
-        .limit(limit)
-    )
+    else:
+        stmt = select(Player).order_by(Player.now_cost.desc()).limit(limit)
 
     players = db.execute(stmt).scalars().all()
 

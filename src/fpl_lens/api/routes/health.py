@@ -29,9 +29,8 @@ def health_check(db: Session = Depends(get_db)) -> JSONResponse:
         db.execute(text("SELECT 1;")).scalar()
 
         # Query last successful ingestion timestamp
-        ingestion_stmt: Any = (
-            select(func.max(IngestionRun.finished_at))
-            .where(IngestionRun.status == "OK")
+        ingestion_stmt: Any = select(func.max(IngestionRun.finished_at)).where(
+            IngestionRun.status == "OK"
         )
         last_ingestion = db.execute(ingestion_stmt).scalar()
         if last_ingestion:
@@ -47,7 +46,12 @@ def health_check(db: Session = Depends(get_db)) -> JSONResponse:
         now = datetime.now(UTC)
         is_stale = False
         current_gw = db.query(Gameweek).filter(Gameweek.is_current.is_(True)).first()
-        if current_gw and current_gw.deadline_time and current_gw.deadline_time <= now and not current_gw.finished:
+        if (
+            current_gw
+            and current_gw.deadline_time
+            and current_gw.deadline_time <= now
+            and not current_gw.finished
+        ):
             if last_ingestion is None or (now - last_ingestion).total_seconds() > 3600:
                 is_stale = True
 

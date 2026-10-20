@@ -28,13 +28,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
     // Max wait on splash: 3 seconds
     _timeoutTimer = Timer(const Duration(seconds: 3), () {
-      _routeNext();
+      if (mounted) {
+        if (ref.read(authNotifierProvider).status == AuthStatus.loading) {
+          ref.read(authNotifierProvider.notifier).resetToUnauthenticated();
+        }
+        _routeNext();
+      }
     });
 
     // Check session
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(authNotifierProvider.notifier).checkSession();
-      _routeNext();
+      if (mounted) {
+        _routeNext();
+      }
     });
   }
 
@@ -42,6 +49,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (!mounted) return;
     _timeoutTimer?.cancel();
     _progressTimer?.cancel();
+
+    final currentStatus = ref.read(authNotifierProvider).status;
+    if (currentStatus == AuthStatus.loading) {
+      ref.read(authNotifierProvider.notifier).resetToUnauthenticated();
+    }
 
     final authState = ref.read(authNotifierProvider);
 

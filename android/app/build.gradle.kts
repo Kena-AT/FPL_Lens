@@ -32,7 +32,6 @@ android {
     productFlavors {
         create("dev") {
             dimension = "environment"
-            applicationIdSuffix = ".dev"
             resValue("string", "app_name", "FPL Lens (Dev)")
         }
         create("prod") {

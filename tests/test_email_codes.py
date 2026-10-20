@@ -65,7 +65,9 @@ def test_code_accepted_once_and_expiry(client: TestClient, db_session: Session):
     db_session.add(expired_entry)
     db_session.commit()
 
-    resp_expired = client.post("/api/v1/auth/verify-email", json={"code": expired_code}, headers=headers)
+    resp_expired = client.post(
+        "/api/v1/auth/verify-email", json={"code": expired_code}, headers=headers
+    )
     assert resp_expired.status_code == 400
     assert resp_expired.json()["error"]["code"] == "INVALID_VERIFICATION_CODE"
 
@@ -91,11 +93,15 @@ def test_code_invalidated_after_five_wrong_attempts(client: TestClient, db_sessi
 
     # Submit 5 wrong codes
     for _ in range(5):
-        resp_wrong = client.post("/api/v1/auth/verify-email", json={"code": "000000"}, headers=headers)
+        resp_wrong = client.post(
+            "/api/v1/auth/verify-email", json={"code": "000000"}, headers=headers
+        )
         assert resp_wrong.status_code == 400
 
     # 6th attempt: submit the CORRECT code -> should be rejected because attempts >= 5
-    resp_correct = client.post("/api/v1/auth/verify-email", json={"code": correct_code}, headers=headers)
+    resp_correct = client.post(
+        "/api/v1/auth/verify-email", json={"code": correct_code}, headers=headers
+    )
     assert resp_correct.status_code == 400
     assert resp_correct.json()["error"]["code"] == "INVALID_VERIFICATION_CODE"
 

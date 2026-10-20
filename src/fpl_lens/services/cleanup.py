@@ -23,23 +23,17 @@ def cleanup_expired_accounts(db: Session, grace_days: int = 3) -> dict[str, int]
     cutoff = datetime.now(UTC) - timedelta(days=grace_days)
 
     # 1. Unverified accounts older than 3 days
-    unverified_stmt = (
-        delete(User)
-        .where(
-            User.status == "unverified",
-            cast(ColumnElement[bool], User.created_at <= cutoff),
-        )
+    unverified_stmt = delete(User).where(
+        User.status == "unverified",
+        cast(ColumnElement[bool], User.created_at <= cutoff),
     )
     res_unverified: Any = db.execute(unverified_stmt)
     unverified_deleted: int = getattr(res_unverified, "rowcount", 0)
 
     # 2. Accounts pending deletion requested > 3 days ago
-    pending_stmt = (
-        delete(User)
-        .where(
-            User.status == "pending_deletion",
-            cast(ColumnElement[bool], User.deletion_requested_at <= cutoff),
-        )
+    pending_stmt = delete(User).where(
+        User.status == "pending_deletion",
+        cast(ColumnElement[bool], User.deletion_requested_at <= cutoff),
     )
     res_pending: Any = db.execute(pending_stmt)
     pending_deleted: int = getattr(res_pending, "rowcount", 0)
@@ -66,26 +60,20 @@ def cleanup_expired_tokens_and_codes(db: Session) -> dict[str, int]:
     now = datetime.now(UTC)
 
     # 1. Email codes: expired or already used
-    codes_stmt = (
-        delete(EmailCode)
-        .where(
-            or_(
-                cast(ColumnElement[bool], EmailCode.expires_at <= now),
-                EmailCode.used_at.isnot(None),
-            )
+    codes_stmt = delete(EmailCode).where(
+        or_(
+            cast(ColumnElement[bool], EmailCode.expires_at <= now),
+            EmailCode.used_at.isnot(None),
         )
     )
     res_codes: Any = db.execute(codes_stmt)
     codes_deleted: int = getattr(res_codes, "rowcount", 0)
 
     # 2. Refresh tokens: expired or revoked
-    tokens_stmt = (
-        delete(RefreshToken)
-        .where(
-            or_(
-                cast(ColumnElement[bool], RefreshToken.expires_at <= now),
-                RefreshToken.revoked_at.isnot(None),
-            )
+    tokens_stmt = delete(RefreshToken).where(
+        or_(
+            cast(ColumnElement[bool], RefreshToken.expires_at <= now),
+            RefreshToken.revoked_at.isnot(None),
         )
     )
     res_tokens: Any = db.execute(tokens_stmt)

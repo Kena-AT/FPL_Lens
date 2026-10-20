@@ -150,7 +150,7 @@ class SquadNotifier extends StateNotifier<SquadState> {
   /// 2. Squad for this gameweek
   /// 3. Transfer history
   /// 4. Gameweek history
-  Future<void> loadSquadSequence(int teamId) async {
+  Future<void> loadSquadSequence(int teamId, {bool force = false}) async {
     state = state.copyWith(
       step: SquadLoadingStep.step1TeamDetails,
       errorMessage: null,
@@ -184,7 +184,7 @@ class SquadNotifier extends StateNotifier<SquadState> {
     List<TransferItemModel> rawTransfers = [];
     try {
       currentGwResp = await _fplRepo.getCurrentGameweek();
-      squadResp = await _fplRepo.getSquad(teamId, gw: currentGwResp.current?.id);
+      squadResp = await _fplRepo.getSquad(teamId, gw: currentGwResp.current?.id, force: force);
 
       // Also fetch transfers for price derivation
       rawTransfers = await _fplRepo.getTransfers(teamId);
@@ -207,12 +207,12 @@ class SquadNotifier extends StateNotifier<SquadState> {
         final pick = squadResp.picks[i];
         final info = playerInfoMap[pick.element];
 
-        final webName = (info?['web_name'] as String?) ?? 'Player ${pick.element}';
-        final position = (info?['position'] as String?) ?? _defaultPosition(pick.position);
-        final teamShortName = (info?['team_short_name'] as String?) ?? 'PL';
-        final nowCost = (info?['now_cost'] as int?) ?? 60;
-        final status = (info?['status'] as String?) ?? 'a';
-        final chance = info?['chance_of_playing_next_round'] as int?;
+        final webName = pick.webName ?? (info?['web_name'] as String?) ?? 'Player ${pick.element}';
+        final position = pick.playerPosition ?? (info?['position'] as String?) ?? _defaultPosition(pick.position);
+        final teamShortName = pick.teamShortName ?? (info?['team_short_name'] as String?) ?? 'PL';
+        final nowCost = pick.nowCost ?? (info?['now_cost'] as int?) ?? 60;
+        final status = pick.status ?? (info?['status'] as String?) ?? 'a';
+        final chance = pick.chanceOfPlayingNextRound ?? (info?['chance_of_playing_next_round'] as int?);
 
         final saved = savedPricesMap[pick.element];
         final derived = _fplRepo.derivePlayerPrice(
@@ -236,7 +236,7 @@ class SquadNotifier extends StateNotifier<SquadState> {
             fplId: drift.Value(pick.element),
             webName: drift.Value(webName),
             position: drift.Value(position),
-            teamId: drift.Value((info?['team_fpl_id'] as int?) ?? 1),
+            teamId: drift.Value(pick.teamFplId ?? (info?['team_fpl_id'] as int?) ?? 1),
             teamShortName: drift.Value(teamShortName),
             purchasePriceTenths: drift.Value(derived.purchasePriceTenths),
             sellingPriceTenths: drift.Value(derived.sellingPriceTenths),
@@ -284,10 +284,10 @@ class SquadNotifier extends StateNotifier<SquadState> {
         return TransferHistoryTableCompanion(
           elementInFplId: drift.Value(t.elementIn),
           elementInCostTenths: drift.Value(t.elementInCost),
-          elementInName: drift.Value('Player #${t.elementIn}'),
+          elementInName: drift.Value(t.elementInName ?? 'Player #${t.elementIn}'),
           elementOutFplId: drift.Value(t.elementOut),
           elementOutCostTenths: drift.Value(t.elementOutCost),
-          elementOutName: drift.Value('Player #${t.elementOut}'),
+          elementOutName: drift.Value(t.elementOutName ?? 'Player #${t.elementOut}'),
           gameweek: drift.Value(t.event),
           transferTime: drift.Value(t.time),
         );
@@ -362,7 +362,7 @@ class SquadNotifier extends StateNotifier<SquadState> {
 
     final teamId = await _secureStore.getFplTeamId();
     if (teamId != null) {
-      await loadSquadSequence(teamId);
+      await loadSquadSequence(teamId, force: force);
     }
     return null;
   }

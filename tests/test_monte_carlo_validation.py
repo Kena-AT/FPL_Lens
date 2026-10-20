@@ -37,7 +37,9 @@ def test_goals_conceded_penalty_monte_carlo_agreement():
         )
 
         # 1. Closed-form exact Poisson formula
-        analytical_penalty = abs(calculate_goals_conceded_penalty(pt, lambda_conceded=lam, position="DEF"))
+        analytical_penalty = abs(
+            calculate_goals_conceded_penalty(pt, lambda_conceded=lam, position="DEF")
+        )
 
         # 2. Monte Carlo simulation of Poisson process:
         # Knuth's algorithm for Poisson random variate
@@ -60,7 +62,7 @@ def test_goals_conceded_penalty_monte_carlo_agreement():
         # Assert analytical value is within 3 standard errors of Monte Carlo estimate (99.7% confidence)
         diff = abs(analytical_penalty - mc_mean)
         assert diff <= 3.0 * mc_se, (
-            f"Rate {lam}: Analytical {analytical_penalty} differed from MC {mc_mean} by {diff} > 3*SE ({3*mc_se})"
+            f"Rate {lam}: Analytical {analytical_penalty} differed from MC {mc_mean} by {diff} > 3*SE ({3 * mc_se})"
         )
 
 
@@ -73,8 +75,8 @@ def test_captaincy_pair_monte_carlo_agreement():
     # Three test pairs: (q_c, q_v, xp_c, xp_v)
     test_pairs = [
         {"name": "High-C", "q_c": 0.95, "q_v": 0.90, "xp_c": 8.0, "xp_v": 6.0},
-        {"name": "Med-C",  "q_c": 0.70, "q_v": 0.85, "xp_c": 7.0, "xp_v": 6.5},
-        {"name": "Low-C",  "q_c": 0.50, "q_v": 0.95, "xp_c": 6.0, "xp_v": 7.5},
+        {"name": "Med-C", "q_c": 0.70, "q_v": 0.85, "xp_c": 7.0, "xp_v": 6.5},
+        {"name": "Low-C", "q_c": 0.50, "q_v": 0.95, "xp_c": 6.0, "xp_v": 7.5},
     ]
 
     n_simulations = 100_000
@@ -113,5 +115,5 @@ def test_captaincy_pair_monte_carlo_agreement():
 
         diff = abs(analytical_bonus - mc_mean)
         assert diff <= 3.0 * mc_se, (
-            f"Pair {pair['name']}: Analytical {analytical_bonus} differed from MC {mc_mean} by {diff} > 3*SE ({3*mc_se})"
+            f"Pair {pair['name']}: Analytical {analytical_bonus} differed from MC {mc_mean} by {diff} > 3*SE ({3 * mc_se})"
         )

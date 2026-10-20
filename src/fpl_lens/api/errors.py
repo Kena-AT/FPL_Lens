@@ -63,7 +63,9 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
     )
 
 
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     request_id = getattr(request.state, "request_id", None) or request_id_ctx.get()
     logger.warning("Validation error on request: %s", exc.errors())
     return JSONResponse(
@@ -77,5 +79,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     logger.error("Unhandled exception: %s", exc, exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=format_error_response("INTERNAL_SERVER_ERROR", "An unexpected error occurred", request_id),
+        content=format_error_response(
+            "INTERNAL_SERVER_ERROR", "An unexpected error occurred", request_id
+        ),
     )
