@@ -121,7 +121,7 @@ async def get_team_squad(
         # Enrich picks with player details from the database so the frontend has names, teams, and prices
         pick_elements = [p.get("element") for p in data.get("picks", []) if p.get("element")]
         if pick_elements:
-            players_stmt = (
+            players_stmt: Any = (
                 select(Player, Team.short_name)
                 .outerjoin(Team, Player.team_fpl_id == Team.fpl_id)
                 .where(Player.fpl_id.in_(pick_elements))
@@ -252,7 +252,7 @@ async def get_team_transfers(
                 element_ids.add(t["element_out"])
 
         if element_ids:
-            players_stmt = select(Player.fpl_id, Player.web_name).where(
+            players_stmt: Any = select(Player.fpl_id, Player.web_name).where(
                 Player.fpl_id.in_(list(element_ids))
             )
             names_map = {row[0]: row[1] for row in db.execute(players_stmt).all()}
