@@ -44,8 +44,8 @@ class NotificationDispatchService:
         creds_path = settings.FIREBASE_CREDENTIALS_PATH
         if creds_path:
             try:
-                import firebase_admin  # type: ignore[import-untyped]
-                from firebase_admin import credentials, messaging  # type: ignore[import-untyped]
+                import firebase_admin  # type: ignore
+                from firebase_admin import credentials, messaging  # type: ignore
 
                 if not firebase_admin._apps:
                     cred = credentials.Certificate(creds_path)

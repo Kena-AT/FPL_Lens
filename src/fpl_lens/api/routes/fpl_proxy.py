@@ -119,7 +119,7 @@ async def get_team_squad(
             # If target_gw has no picks on FPL upstream, fallback to entry.current_event
             entry = await fpl_client.get_entry(team_id)
             cur_event = entry.get("current_event") if entry else None
-            if cur_event and cur_event != target_gw and 1 <= cur_event <= 38:
+            if isinstance(cur_event, int) and cur_event != target_gw and 1 <= cur_event <= 38:
                 target_gw = cur_event
                 data = await fpl_client.get_picks(team_id, target_gw)
 
