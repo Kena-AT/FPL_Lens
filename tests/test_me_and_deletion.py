@@ -89,3 +89,50 @@ def test_account_deletion_and_cleanup(client: TestClient, db_session: Session):
     # Verify user record is hard-deleted from DB
     deleted_user = db_session.query(User).filter(User.id == user_id).first()
     assert deleted_user is None
+
+
+def test_notification_preferences_endpoints(client: TestClient, db_session: Session):
+    tag = uuid.uuid4().hex[:6]
+    team = secrets.randbelow(1_000_000) + 5_000_000
+
+    user = User(
+        id=uuid.uuid4(),
+        email=f"notif_user_{tag}@example.com",
+        display_name="Notif Tester",
+        fpl_team_id=team,
+        status="active",
+        email_verified_at=datetime.now(UTC),
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    token = create_access_token(user)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. GET default preferences
+    resp_get = client.get("/api/v1/me/notifications", headers=headers)
+    assert resp_get.status_code == 200
+    data = resp_get.json()
+    assert data["deadline_reminders"] is True
+    assert data["injury_alerts"] is True
+    assert data["deadline_reminder_hours"] == 6
+
+    # 2. PUT updated preferences
+    update_payload = {
+        "deadline_reminders": True,
+        "injury_alerts": False,
+        "deadline_reminder_hours": 3,
+    }
+    resp_put = client.put("/api/v1/me/notifications", json=update_payload, headers=headers)
+    assert resp_put.status_code == 200
+    updated = resp_put.json()
+    assert updated["injury_alerts"] is False
+    assert updated["deadline_reminder_hours"] == 3
+
+    # 3. Verify validation error on invalid reminder hours (not in 1, 3, 6, 12, 24)
+    resp_invalid = client.put(
+        "/api/v1/me/notifications",
+        json={"deadline_reminders": True, "injury_alerts": True, "deadline_reminder_hours": 7},
+        headers=headers,
+    )
+    assert resp_invalid.status_code == 422

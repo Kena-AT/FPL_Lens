@@ -280,5 +280,73 @@ void main() {
       // For horizon 3: score = h1 + 0.9 * h1 + 0.9^2 * h1 = (1 + 0.9 + 0.81) * h1 = 2.71 * h1
       expect(h3.netExpectedPoints, closeTo(h1.netExpectedPoints * (1.0 + 0.90 + 0.81), 0.5));
     });
+
+    group('Free Transfer Banking and Hit Rules (Spec §6.2)', () {
+      test('bank accumulation caps at 5 free transfers', () {
+        // avail_t = min(5, bank_{t-1} + 1)
+        expect(TransferOptimiser.computeAvailableFreeTransfers(0), equals(1));
+        expect(TransferOptimiser.computeAvailableFreeTransfers(1), equals(2));
+        expect(TransferOptimiser.computeAvailableFreeTransfers(2), equals(3));
+        expect(TransferOptimiser.computeAvailableFreeTransfers(3), equals(4));
+        expect(TransferOptimiser.computeAvailableFreeTransfers(4), equals(5));
+        expect(TransferOptimiser.computeAvailableFreeTransfers(5), equals(5));
+        expect(TransferOptimiser.computeAvailableFreeTransfers(10), equals(5));
+      });
+
+      test('hit calculation matches worked examples across scenarios', () {
+        // Scenario 1: 1 transfer with 1 FT -> 0 hits
+        expect(TransferOptimiser.computeHitCost(1, 1), equals(0));
+
+        // Scenario 2: 2 transfers with 1 FT -> 1 hit = 4 points
+        expect(TransferOptimiser.computeHitCost(2, 1), equals(4));
+
+        // Scenario 3: 4 transfers with 2 FT -> 2 hits = 8 points
+        expect(TransferOptimiser.computeHitCost(4, 2), equals(8));
+
+        // Scenario 4: 5 transfers with 1 FT -> 4 hits = 16 points
+        expect(TransferOptimiser.computeHitCost(5, 1), equals(16));
+
+        // Scenario 5: Wildcard or Free Hit active -> 0 hit penalty
+        expect(TransferOptimiser.computeHitCost(5, 1, isChipActive: true), equals(0));
+      });
+
+      test('bank state transition timeline with transfers and chips', () {
+        // GW8: Start with 0 banked -> receive 1 FT -> make 0 transfers -> bank 1
+        var bank = TransferOptimiser.computeBankAfterTransfers(
+          previousBankedTransfers: 0,
+          transfersMade: 0,
+        );
+        expect(bank, equals(1));
+
+        // GW9: Have 1 banked -> avail is 2 -> make 2 transfers -> bank 0
+        bank = TransferOptimiser.computeBankAfterTransfers(
+          previousBankedTransfers: bank,
+          transfersMade: 2,
+        );
+        expect(bank, equals(0));
+
+        // GW10: Have 0 banked -> avail is 1 -> make 0 transfers -> bank 1
+        bank = TransferOptimiser.computeBankAfterTransfers(
+          previousBankedTransfers: bank,
+          transfersMade: 0,
+        );
+        expect(bank, equals(1));
+
+        // GW11: Chip gameweek (Wildcard) -> bank carried unchanged across chip gameweek
+        bank = TransferOptimiser.computeBankAfterTransfers(
+          previousBankedTransfers: bank,
+          transfersMade: 10,
+          isChipActive: true,
+        );
+        expect(bank, equals(1));
+
+        // GW12: Bank 1 + 1 = 2 FT available -> 3 transfers made -> bank 0 (1 hit incurred)
+        bank = TransferOptimiser.computeBankAfterTransfers(
+          previousBankedTransfers: bank,
+          transfersMade: 3,
+        );
+        expect(bank, equals(0));
+      });
+    });
   });
 }

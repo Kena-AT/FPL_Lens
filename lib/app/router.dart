@@ -10,6 +10,9 @@ import '../features/history/screens/history_screen.dart';
 import '../features/home/screens/home_shell_screen.dart';
 import '../features/onboarding/screens/load_squad_screen.dart';
 import '../features/onboarding/screens/team_check_screen.dart';
+import '../features/lineup/screens/heatmap_screen.dart';
+import '../features/player/screens/player_detail_screen.dart';
+import '../features/settings/screens/notifications_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../features/squad/screens/purchase_prices_screen.dart';
 import 'guards.dart';
@@ -106,9 +109,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HistoryScreen(),
       ),
       GoRoute(
+        path: '/player/:fplId',
+        name: 'playerDetail',
+        builder: (context, state) {
+          final fplId = int.tryParse(state.pathParameters['fplId'] ?? '') ?? 0;
+          final gw = int.tryParse(state.uri.queryParameters['gw'] ?? '');
+          return PlayerDetailScreen(fplId: fplId, gameweek: gw);
+        },
+      ),
+      GoRoute(
+        path: '/heatmap',
+        name: 'heatmap',
+        builder: (context, state) => const HeatmapScreen(),
+      ),
+      GoRoute(
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsScreen(),
+        routes: [
+          GoRoute(
+            path: 'notifications',
+            name: 'notifications',
+            builder: (context, state) => const NotificationsScreen(),
+          ),
+        ],
       ),
     ],
   );

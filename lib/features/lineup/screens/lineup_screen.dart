@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/optimiser/player_candidate.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/bench_strip.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/freshness_label.dart';
 import '../../../core/widgets/pitch_view.dart';
 import '../../squad/providers/squad_provider.dart';
 import '../providers/lineup_provider.dart';
@@ -331,6 +333,56 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                         });
                       },
                       onPlayerLongPress: (p) => _showPlayerActionSheet(p),
+                    ),
+
+                    const SizedBox(height: 16.0),
+
+                    // Freshness & Stale Handling (Frontend Plan P10 / Spec §10)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
+                      child: FreshnessLabel(
+                        lastUpdated: squadState.lastSyncTime ?? DateTime.now(),
+                        staleThreshold: const Duration(minutes: 10),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16.0),
+
+                    // Save Lineup Action
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
+                      child: Builder(
+                        builder: (context) {
+                          final lastSync = squadState.lastSyncTime ?? DateTime.now();
+                          final isStale = DateTime.now().difference(lastSync) > const Duration(minutes: 10);
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              AppButton(
+                                label: 'Save lineup',
+                                onPressed: isStale
+                                    ? null
+                                    : () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Lineup saved.')),
+                                        );
+                                      },
+                              ),
+                              if (isStale) ...[
+                                const SizedBox(height: 6.0),
+                                Text(
+                                  'Projections are out of date. Sync to save.',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppTokens.statusDoubtful,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
                     ),
 
                     const SizedBox(height: 24.0),

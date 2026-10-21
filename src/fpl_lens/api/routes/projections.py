@@ -14,8 +14,9 @@ from sqlalchemy.orm import Session
 
 from fpl_lens.api.deps import get_current_active_user
 from fpl_lens.api.errors import AppError
-from fpl_lens.db.models import Fixture, Gameweek, Player, PublishedProjection, User
+from fpl_lens.db.models import Fixture, Gameweek, Player, PublishedProjection, Team, User
 from fpl_lens.db.session import get_db
+from fpl_lens.engine.attribution import AttributionEngine
 from fpl_lens.logging import logger
 
 router = APIRouter(tags=["Projections & Reference"])
@@ -84,14 +85,61 @@ def get_player_projection(
 ) -> JSONResponse:
     """
     Returns projection details for a specific player in gameweek `gw`.
-    Extracted from the published projection bundle.
+    Includes player metadata, upcoming fixtures, opponent context, and deterministic attributions.
     """
+    player = db.query(Player).filter(Player.fpl_id == fpl_id).first()
     pub = db.query(PublishedProjection).filter(PublishedProjection.gameweek == gw).first()
-    if not pub:
+
+    if not player and not pub:
         raise AppError(
-            code="PROJECTIONS_UNAVAILABLE",
-            message=f"Projections for gameweek {gw} are not yet published",
+            code="NOT_FOUND",
+            message=f"Player {fpl_id} not found",
             status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    team = (
+        db.query(Team).filter(Team.fpl_id == player.team_fpl_id).first()
+        if player and player.team_fpl_id
+        else None
+    )
+
+    player_info = (
+        {
+            "fpl_id": player.fpl_id,
+            "web_name": player.web_name,
+            "first_name": player.first_name,
+            "second_name": player.second_name,
+            "position": player.position,
+            "team_fpl_id": player.team_fpl_id,
+            "team_short_name": team.short_name if team else None,
+            "now_cost": player.now_cost,
+            "status": player.status,
+            "chance_of_playing_next_round": player.chance_of_playing_next_round,
+            "news": player.news,
+        }
+        if player
+        else None
+    )
+
+    if not pub:
+        if not player:
+            raise AppError(
+                code="NOT_FOUND",
+                message=f"Player {fpl_id} not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "gameweek": gw,
+                "fpl_id": fpl_id,
+                "player": player_info,
+                "model_version": None,
+                "inputs_as_of": None,
+                "fixtures": [],
+                "attributions": [],
+            },
+            headers={"Cache-Control": "public, max-age=60"},
         )
 
     bundle = cast(dict[str, Any], pub.bundle_json)
@@ -105,14 +153,48 @@ def get_player_projection(
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
+    fixtures = player_data.get("fixtures", []) if player_data else []
+
+    # Enrich fixture context with opponent information
+    enriched_fixtures: list[dict[str, Any]] = []
+    for f in fixtures:
+        f_dict = dict(f)
+        fixture_db = db.query(Fixture).filter(Fixture.fpl_id == f.get("fixture_fpl_id")).first()
+        if fixture_db and player and player.team_fpl_id:
+            is_home = fixture_db.home_team_fpl_id == player.team_fpl_id
+            opp_id = fixture_db.away_team_fpl_id if is_home else fixture_db.home_team_fpl_id
+            opp_team = db.query(Team).filter(Team.fpl_id == opp_id).first()
+            f_dict["is_home"] = is_home
+            f_dict["opponent_short_name"] = opp_team.short_name if opp_team else None
+            f_dict["kickoff_time"] = (
+                fixture_db.kickoff_time.isoformat() if fixture_db.kickoff_time else None
+            )
+            if opp_team:
+                f_dict["opponent_attack_strength"] = (
+                    opp_team.strength_attack_away if is_home else opp_team.strength_attack_home
+                )
+                f_dict["opponent_defence_strength"] = (
+                    opp_team.strength_defence_away if is_home else opp_team.strength_defence_home
+                )
+        enriched_fixtures.append(f_dict)
+
+    # Generate attributions from primary fixture projection
+    attributions = (
+        AttributionEngine.generate_attributions(fixtures[0])
+        if fixtures
+        else []
+    )
+
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
             "gameweek": gw,
             "fpl_id": fpl_id,
+            "player": player_info,
             "model_version": bundle.get("model_version"),
             "inputs_as_of": bundle.get("inputs_as_of"),
-            "fixtures": player_data.get("fixtures", []),
+            "fixtures": enriched_fixtures,
+            "attributions": attributions,
         },
         headers={"Cache-Control": "public, max-age=300"},
     )
@@ -123,8 +205,16 @@ def get_current_gameweek(db: Session = Depends(get_db)) -> JSONResponse:
     """
     Returns current and next gameweek metadata.
     """
-    current_gw = db.query(Gameweek).filter(Gameweek.is_current.is_(True)).first()
-    next_gw = db.query(Gameweek).filter(Gameweek.is_next.is_(True)).first()
+    current_gw = (
+        db.query(Gameweek)
+        .filter(Gameweek.is_current.is_(True))
+        .first()
+    )
+    next_gw = (
+        db.query(Gameweek)
+        .filter(Gameweek.is_next.is_(True))
+        .first()
+    )
 
     if not current_gw and not next_gw:
         # Fallback to earliest unfinished gameweek

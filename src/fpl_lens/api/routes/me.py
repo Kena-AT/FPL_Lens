@@ -2,12 +2,17 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fpl_lens.api.deps import get_client_ip, get_current_user, get_verified_user
 from fpl_lens.api.errors import AppError
-from fpl_lens.api.schemas.auth import UserProfileResponse
-from fpl_lens.db.models import User
+from fpl_lens.api.schemas.auth import (
+    NotificationPreferencesRequest,
+    NotificationPreferencesResponse,
+    UserProfileResponse,
+)
+from fpl_lens.db.models import NotificationPreference, User
 from fpl_lens.db.session import get_db
 from fpl_lens.services.audit import record_audit_event
 from fpl_lens.services.token import revoke_all_user_tokens
@@ -29,6 +34,73 @@ def get_my_profile(
         fpl_team_id=current_user.fpl_team_id,
         status=current_user.status,
         created_at=current_user.created_at.isoformat() if current_user.created_at else "",
+    )
+
+
+@router.get("/notifications", response_model=NotificationPreferencesResponse)
+def get_notification_preferences(
+    response: Response,
+    current_user: User = Depends(get_verified_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Reads notification preferences for the authenticated user.
+    Creates default preferences if not yet existing.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    stmt = select(NotificationPreference).where(NotificationPreference.user_id == current_user.id)
+    pref = db.execute(stmt).scalar_one_or_none()
+
+    if not pref:
+        pref = NotificationPreference(
+            user_id=current_user.id,
+            deadline_reminders=True,
+            injury_alerts=True,
+            deadline_reminder_hours=6,
+        )
+        db.add(pref)
+        db.commit()
+
+    return NotificationPreferencesResponse(
+        deadline_reminders=bool(pref.deadline_reminders),
+        injury_alerts=bool(pref.injury_alerts),
+        deadline_reminder_hours=int(pref.deadline_reminder_hours),
+    )
+
+
+@router.put("/notifications", response_model=NotificationPreferencesResponse)
+def update_notification_preferences(
+    payload: NotificationPreferencesRequest,
+    response: Response,
+    current_user: User = Depends(get_verified_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Updates notification preferences for the authenticated user.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    stmt = select(NotificationPreference).where(NotificationPreference.user_id == current_user.id)
+    pref = db.execute(stmt).scalar_one_or_none()
+
+    if not pref:
+        pref = NotificationPreference(
+            user_id=current_user.id,
+            deadline_reminders=payload.deadline_reminders,
+            injury_alerts=payload.injury_alerts,
+            deadline_reminder_hours=payload.deadline_reminder_hours,
+        )
+        db.add(pref)
+    else:
+        pref.deadline_reminders = payload.deadline_reminders  # type: ignore[assignment]
+        pref.injury_alerts = payload.injury_alerts  # type: ignore[assignment]
+        pref.deadline_reminder_hours = payload.deadline_reminder_hours  # type: ignore[assignment]
+
+    db.commit()
+
+    return NotificationPreferencesResponse(
+        deadline_reminders=bool(pref.deadline_reminders),
+        injury_alerts=bool(pref.injury_alerts),
+        deadline_reminder_hours=int(pref.deadline_reminder_hours),
     )
 
 
