@@ -164,12 +164,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     ),
                   ),
                   const SizedBox(height: AppTokens.space8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppTokens.bgSurface,
+                  Material(
+                    color: AppTokens.bgSurface,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                      border: Border.all(color: AppTokens.borderSubtle),
+                      side: const BorderSide(color: AppTokens.borderSubtle),
                     ),
+                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
                         SwitchListTile(
@@ -246,12 +247,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     ),
                   ),
                   const SizedBox(height: AppTokens.space8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppTokens.bgSurface,
+                  Material(
+                    color: AppTokens.bgSurface,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                      border: Border.all(color: AppTokens.borderSubtle),
+                      side: const BorderSide(color: AppTokens.borderSubtle),
                     ),
+                    clipBehavior: Clip.antiAlias,
                     child: SwitchListTile(
                       title: const Text('Squad injury & status alerts', style: AppTextStyles.body),
                       subtitle: Text(
