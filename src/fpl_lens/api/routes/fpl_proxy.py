@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
 from fpl_lens.api.deps import get_current_active_user
@@ -101,7 +101,10 @@ async def get_team_squad(
         # Resolve current gameweek from DB (official PL gameweeks 1-38)
         stmt: Any = (
             select(Gameweek.id)
-            .where(Gameweek.is_current.is_(True), Gameweek.id <= 38)
+            .where(
+                Gameweek.is_current.is_(True),
+                cast(ColumnElement[bool], Gameweek.id <= 38),
+            )
             .limit(1)
         )
         current_gw_id = db.execute(stmt).scalar_one_or_none()

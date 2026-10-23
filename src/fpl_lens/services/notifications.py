@@ -1,9 +1,9 @@
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
 from fpl_lens.config import settings
@@ -104,7 +104,7 @@ async def dispatch_deadline_reminders(
     # Find the next upcoming gameweek
     stmt = (
         select(Gameweek)
-        .where(Gameweek.deadline_time > now)
+        .where(cast(ColumnElement[bool], Gameweek.deadline_time > now))
         .order_by(Gameweek.deadline_time.asc())
         .limit(1)
     )
