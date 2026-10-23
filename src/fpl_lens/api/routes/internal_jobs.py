@@ -83,6 +83,18 @@ async def trigger_internal_job(
         result = run_projection_job(db)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
+    if name == "deadline-reminders":
+        from fpl_lens.services.notifications import dispatch_deadline_reminders
+
+        result = await dispatch_deadline_reminders(db)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    if name == "injury-alerts":
+        from fpl_lens.services.notifications import dispatch_injury_alerts
+
+        result = await dispatch_injury_alerts(db)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
     raise AppError(
         code="NOT_FOUND",
         message=f"Unknown internal job '{name}'",

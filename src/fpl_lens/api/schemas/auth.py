@@ -95,3 +95,22 @@ class UserProfileResponse(StrictBaseModel):
     fpl_team_id: int
     status: str
     created_at: str
+
+
+class NotificationPreferencesRequest(StrictBaseModel):
+    deadline_reminders: bool = True
+    injury_alerts: bool = True
+    deadline_reminder_hours: int = Field(default=6)
+
+    @field_validator("deadline_reminder_hours")
+    @classmethod
+    def validate_hours(cls, v: int) -> int:
+        if v not in (1, 3, 6, 12, 24):
+            raise ValueError("deadline_reminder_hours must be one of 1, 3, 6, 12, 24")
+        return v
+
+
+class NotificationPreferencesResponse(StrictBaseModel):
+    deadline_reminders: bool
+    injury_alerts: bool
+    deadline_reminder_hours: int

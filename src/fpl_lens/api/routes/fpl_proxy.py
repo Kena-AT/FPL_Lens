@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
 from fpl_lens.api.deps import get_current_active_user
@@ -97,9 +97,16 @@ async def get_team_squad(
     _verify_team_ownership(user, team_id)
 
     target_gw = gw
-    if target_gw is None:
-        # Resolve current gameweek from DB
-        stmt: Any = select(Gameweek.id).where(Gameweek.is_current.is_(True)).limit(1)
+    if target_gw is None or target_gw > 38 or target_gw < 1:
+        # Resolve current gameweek from DB (official PL gameweeks 1-38)
+        stmt: Any = (
+            select(Gameweek.id)
+            .where(
+                Gameweek.is_current.is_(True),
+                cast(ColumnElement[bool], Gameweek.id <= 38),
+            )
+            .limit(1)
+        )
         current_gw_id = db.execute(stmt).scalar_one_or_none()
         target_gw = current_gw_id if current_gw_id is not None else 1
 
@@ -111,6 +118,14 @@ async def get_team_squad(
 
     try:
         data = await fpl_client.get_picks(team_id, target_gw)
+        if data is None:
+            # If target_gw has no picks on FPL upstream, fallback to entry.current_event
+            entry = await fpl_client.get_entry(team_id)
+            cur_event = entry.get("current_event") if entry else None
+            if isinstance(cur_event, int) and cur_event != target_gw and 1 <= cur_event <= 38:
+                target_gw = cur_event
+                data = await fpl_client.get_picks(team_id, target_gw)
+
         if data is None:
             raise AppError(
                 code="FPL_TEAM_NOT_FOUND",

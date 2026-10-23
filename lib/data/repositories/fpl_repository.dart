@@ -26,6 +26,7 @@ abstract class IFplRepository {
   Future<List<TransferItemModel>> getTransfers(int teamId);
   Future<CurrentGameweekResponse> getCurrentGameweek();
   Future<Map<String, dynamic>> getProjectionBundle(int gw);
+  Future<Map<String, dynamic>> getPlayerProjection(int gw, int fplId);
   Future<List<Map<String, dynamic>>> searchPlayers(String query, {int limit = 20});
 
   DerivedPlayerPrice derivePlayerPrice({
@@ -114,6 +115,16 @@ class FplRepository implements IFplRepository {
   Future<Map<String, dynamic>> getProjectionBundle(int gw) async {
     try {
       final response = await _dio.get('/api/v1/projections/$gw');
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPlayerProjection(int gw, int fplId) async {
+    try {
+      final response = await _dio.get('/api/v1/projections/$gw/players/$fplId');
       return response.data as Map<String, dynamic>;
     } catch (e) {
       throw ErrorMapper.fromException(e);

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/optimiser/player_candidate.dart';
@@ -10,10 +11,63 @@ import '../../../core/widgets/hit_warning.dart';
 import '../../../core/widgets/pitch_view.dart';
 import '../../squad/providers/squad_provider.dart';
 
+class _OptimizationWorkerParams {
+  final List<PlayerCandidate> currentSquad;
+  final List<PlayerCandidate> availablePool;
+  final int bankTenths;
+  final int freeTransfersAvailable;
+
+  const _OptimizationWorkerParams({
+    required this.currentSquad,
+    required this.availablePool,
+    required this.bankTenths,
+    required this.freeTransfersAvailable,
+  });
+}
+
+TransferMove _runOptimizationWorker(_OptimizationWorkerParams params) {
+  return TransferOptimiser.optimizeTransfersHorizon1(
+    currentSquad: params.currentSquad,
+    availablePool: params.availablePool,
+    bankTenths: params.bankTenths,
+    freeTransfersAvailable: params.freeTransfersAvailable,
+  );
+}
+
+String _normalizePosition(String pos) {
+  final upper = pos.trim().toUpperCase();
+  switch (upper) {
+    case '1':
+    case 'GKP':
+    case 'GK':
+    case 'GOALKEEPER':
+      return 'GK';
+    case '2':
+    case 'DEF':
+    case 'DEFENDER':
+      return 'DEF';
+    case '3':
+    case 'MID':
+    case 'MIDFIELDER':
+      return 'MID';
+    case '4':
+    case 'FWD':
+    case 'FORWARD':
+      return 'FWD';
+    default:
+      return 'MID';
+  }
+}
+
 /// Screen P12: TransferLabScreen (Spec §6, Frontend Implementation Plan §3).
 /// Interactive transfer planning across Horizons 1, 3, and 5 with discount gamma = 0.90.
 class TransferLabScreen extends ConsumerStatefulWidget {
-  const TransferLabScreen({super.key});
+  final bool runInBackground;
+
+  const TransferLabScreen({
+    super.key,
+    this.runInBackground = true,
+  });
 
   @override
   ConsumerState<TransferLabScreen> createState() => _TransferLabScreenState();
@@ -22,12 +76,14 @@ class TransferLabScreen extends ConsumerStatefulWidget {
 class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
   int _selectedHorizon = 1; // 1, 3, or 5
   bool _isOptimizing = false;
+  TransferMove? _baseH1Move;
   TransferMove? _recommendedMove;
+  String? _errorMessage;
 
   List<PlayerCandidate> _buildCandidatesFromSquad() {
     final squadState = ref.read(squadNotifierProvider);
     return squadState.squad.map((p) {
-      final pos = p.position == 'GKP' ? 'GK' : p.position;
+      final pos = _normalizePosition(p.position);
       final pStart = (p.chanceOfPlayingNextRound != null)
           ? (p.chanceOfPlayingNextRound! / 100.0).clamp(0.05, 0.95)
           : (p.status == 'out' ? 0.05 : 0.90);
@@ -51,51 +107,62 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
   List<PlayerCandidate> _generateAvailablePool(List<PlayerCandidate> currentSquad) {
     final currentIds = currentSquad.map((p) => p.fplId).toSet();
     const mockTargets = [
-      PlayerCandidate(fplId: 101, webName: 'Haaland', position: 'FWD', clubId: 4, priceTenths: 152, sellingPriceTenths: 152, xp: 9.2, pStart: 0.95, pSub: 0.05),
-      PlayerCandidate(fplId: 102, webName: 'Salah', position: 'MID', clubId: 3, priceTenths: 128, sellingPriceTenths: 128, xp: 8.8, pStart: 0.96, pSub: 0.05),
-      PlayerCandidate(fplId: 103, webName: 'Palmer', position: 'MID', clubId: 6, priceTenths: 110, sellingPriceTenths: 110, xp: 8.2, pStart: 0.94, pSub: 0.05),
-      PlayerCandidate(fplId: 104, webName: 'Saka', position: 'MID', clubId: 1, priceTenths: 102, sellingPriceTenths: 102, xp: 7.9, pStart: 0.92, pSub: 0.05),
-      PlayerCandidate(fplId: 105, webName: 'Alexander-Arnold', position: 'DEF', clubId: 3, priceTenths: 72, sellingPriceTenths: 72, xp: 6.5, pStart: 0.90, pSub: 0.05),
-      PlayerCandidate(fplId: 106, webName: 'Gabriel', position: 'DEF', clubId: 1, priceTenths: 62, sellingPriceTenths: 62, xp: 5.2, pStart: 0.95, pSub: 0.05),
-      PlayerCandidate(fplId: 107, webName: 'Gvardiol', position: 'DEF', clubId: 4, priceTenths: 61, sellingPriceTenths: 61, xp: 5.3, pStart: 0.90, pSub: 0.05),
-      PlayerCandidate(fplId: 108, webName: 'Watkins', position: 'FWD', clubId: 7, priceTenths: 91, sellingPriceTenths: 91, xp: 6.9, pStart: 0.92, pSub: 0.05),
-      PlayerCandidate(fplId: 109, webName: 'Wood', position: 'FWD', clubId: 2, priceTenths: 64, sellingPriceTenths: 64, xp: 5.8, pStart: 0.88, pSub: 0.10),
-      PlayerCandidate(fplId: 110, webName: 'Mbeumo', position: 'MID', clubId: 8, priceTenths: 78, sellingPriceTenths: 78, xp: 6.4, pStart: 0.92, pSub: 0.05),
-      PlayerCandidate(fplId: 111, webName: 'Raya', position: 'GK', clubId: 1, priceTenths: 56, sellingPriceTenths: 56, xp: 4.9, pStart: 0.98, pSub: 0.02),
-      PlayerCandidate(fplId: 112, webName: 'Sels', position: 'GK', clubId: 2, priceTenths: 48, sellingPriceTenths: 48, xp: 4.4, pStart: 0.96, pSub: 0.02),
+      PlayerCandidate(fplId: 9001, webName: 'Haaland', position: 'FWD', clubId: 4, priceTenths: 152, sellingPriceTenths: 152, xp: 9.2, pStart: 0.95, pSub: 0.05),
+      PlayerCandidate(fplId: 9002, webName: 'Salah', position: 'MID', clubId: 3, priceTenths: 128, sellingPriceTenths: 128, xp: 8.8, pStart: 0.96, pSub: 0.05),
+      PlayerCandidate(fplId: 9003, webName: 'Palmer', position: 'MID', clubId: 6, priceTenths: 110, sellingPriceTenths: 110, xp: 8.2, pStart: 0.94, pSub: 0.05),
+      PlayerCandidate(fplId: 9004, webName: 'Saka', position: 'MID', clubId: 1, priceTenths: 102, sellingPriceTenths: 102, xp: 7.9, pStart: 0.92, pSub: 0.05),
+      PlayerCandidate(fplId: 9005, webName: 'Alexander-Arnold', position: 'DEF', clubId: 3, priceTenths: 72, sellingPriceTenths: 72, xp: 6.5, pStart: 0.90, pSub: 0.05),
+      PlayerCandidate(fplId: 9006, webName: 'Gabriel', position: 'DEF', clubId: 1, priceTenths: 62, sellingPriceTenths: 62, xp: 5.2, pStart: 0.95, pSub: 0.05),
+      PlayerCandidate(fplId: 9007, webName: 'Gvardiol', position: 'DEF', clubId: 4, priceTenths: 61, sellingPriceTenths: 61, xp: 5.3, pStart: 0.90, pSub: 0.05),
+      PlayerCandidate(fplId: 9008, webName: 'Watkins', position: 'FWD', clubId: 7, priceTenths: 91, sellingPriceTenths: 91, xp: 6.9, pStart: 0.92, pSub: 0.05),
+      PlayerCandidate(fplId: 9009, webName: 'Wood', position: 'FWD', clubId: 2, priceTenths: 64, sellingPriceTenths: 64, xp: 5.8, pStart: 0.88, pSub: 0.10),
+      PlayerCandidate(fplId: 9010, webName: 'Mbeumo', position: 'MID', clubId: 8, priceTenths: 78, sellingPriceTenths: 78, xp: 6.4, pStart: 0.92, pSub: 0.05),
+      PlayerCandidate(fplId: 9011, webName: 'Raya', position: 'GK', clubId: 1, priceTenths: 56, sellingPriceTenths: 56, xp: 4.9, pStart: 0.98, pSub: 0.02),
+      PlayerCandidate(fplId: 9012, webName: 'Sels', position: 'GK', clubId: 2, priceTenths: 48, sellingPriceTenths: 48, xp: 4.4, pStart: 0.96, pSub: 0.02),
     ];
 
     return mockTargets.where((p) => !currentIds.contains(p.fplId)).toList();
   }
 
-  void _runOptimiser() {
+  Future<void> _runOptimiser() async {
     final squadState = ref.read(squadNotifierProvider);
-    if (!squadState.hasSquad) return;
+    if (!squadState.hasSquad || squadState.squad.length != 15 || _isOptimizing) return;
 
     setState(() {
       _isOptimizing = true;
+      _errorMessage = null;
     });
 
     try {
       final currentSquad = _buildCandidatesFromSquad();
       final pool = _generateAvailablePool(currentSquad);
 
-      final move = TransferOptimiser.optimizeTransfersMultiHorizon(
+      final workerParams = _OptimizationWorkerParams(
         currentSquad: currentSquad,
         availablePool: pool,
         bankTenths: squadState.bankTenths,
         freeTransfersAvailable: squadState.freeTransfers,
-        horizon: _selectedHorizon,
       );
 
+      final h1Move = widget.runInBackground
+          ? await compute(_runOptimizationWorker, workerParams)
+          : _runOptimizationWorker(workerParams);
+
+      if (!mounted) return;
       setState(() {
-        _recommendedMove = move;
+        _baseH1Move = h1Move;
+        _recommendedMove = TransferOptimiser.deriveMultiHorizonMove(h1Move, _selectedHorizon);
         _isOptimizing = false;
       });
-    } catch (_) {
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isOptimizing = false;
+        _errorMessage = 'Transfer optimization failed: $e';
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Transfer optimization failed: $e')),
+      );
     }
   }
 
@@ -115,24 +182,40 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
           maxBudgetTenths: maxBudget,
           initialPositionFilter: playerToReplace.position,
           onCandidateSelected: (chosen) {
-            // Apply single manual replacement and re-evaluate
             final updatedSquad = currentSquad.map((p) => p.fplId == playerToReplace.fplId ? chosen : p).toList();
-            final move = TransferOptimiser.optimizeTransfersHorizon1(
-              currentSquad: updatedSquad,
-              availablePool: const [],
-              bankTenths: squadState.bankTenths,
-              freeTransfersAvailable: squadState.freeTransfers,
-            );
-            setState(() {
-              _recommendedMove = TransferMove(
+            if (!TransferOptimiser.isValidSquad(updatedSquad)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Invalid move: exceeds 3 players per club or position limit.'),
+                ),
+              );
+              return;
+            }
+            try {
+              final move = TransferOptimiser.optimizeTransfersHorizon1(
+                currentSquad: updatedSquad,
+                availablePool: const [],
+                bankTenths: squadState.bankTenths,
+                freeTransfersAvailable: squadState.freeTransfers,
+              );
+              final hit = TransferOptimiser.computeHitCost(1, squadState.freeTransfers);
+              final h1Move = TransferMove(
                 transfersOut: [playerToReplace],
                 transfersIn: [chosen],
-                hitCost: TransferOptimiser.computeHitCost(1, squadState.freeTransfers),
-                netExpectedPoints: move.lineupResult.totalExpectedPoints,
+                hitCost: hit,
+                netExpectedPoints: move.lineupResult.totalExpectedPoints - hit,
                 lineupResult: move.lineupResult,
-                horizon: _selectedHorizon,
+                horizon: 1,
               );
-            });
+              setState(() {
+                _baseH1Move = h1Move;
+                _recommendedMove = TransferOptimiser.deriveMultiHorizonMove(h1Move, _selectedHorizon);
+              });
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Could not evaluate transfer: $e')),
+              );
+            }
           },
         );
       },
@@ -143,15 +226,17 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
   Widget build(BuildContext context) {
     final squadState = ref.watch(squadNotifierProvider);
 
-    if (!squadState.hasSquad) {
+    if (!squadState.hasSquad || squadState.squad.length != 15) {
       return Scaffold(
         backgroundColor: AppTokens.bgBase,
         appBar: AppBar(title: const Text('Transfer Lab'), backgroundColor: AppTokens.bgBase),
-        body: const Center(
+        body: Center(
           child: EmptyState(
             icon: Icons.swap_horiz_outlined,
-            title: 'No squad loaded',
-            body: 'Sync your squad to access Transfer Lab.',
+            title: squadState.hasSquad ? 'Incomplete squad (${squadState.squad.length}/15)' : 'No squad loaded',
+            body: squadState.hasSquad
+                ? 'Your squad must contain exactly 15 players to access Transfer Lab. Please sync your squad.'
+                : 'Sync your squad to access Transfer Lab.',
           ),
         ),
       );
@@ -197,6 +282,29 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
               ),
             ),
 
+            if (_errorMessage != null)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 4.0),
+                padding: const EdgeInsets.all(AppTokens.space12),
+                decoration: BoxDecoration(
+                  color: AppTokens.statusOut.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppTokens.radiusCard),
+                  border: Border.all(color: AppTokens.statusOut),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: AppTokens.statusOut, size: 20.0),
+                    const SizedBox(width: 8.0),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // Status Bar: Bank & Free Transfers
             Container(
               margin: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 8.0),
@@ -211,8 +319,21 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 children: [
                   _buildMetric('IN THE BANK', bankStr, AppTokens.goldPrimary),
                   Container(width: 1.0, height: 28.0, color: AppTokens.borderSubtle),
-                  _buildMetric('FREE TRANSFERS', '${squadState.freeTransfers}', AppTokens.neonPrimary),
+                  _buildMetric('FREE TRANSFERS', '${squadState.freeTransfers} (max 5*)', AppTokens.neonPrimary),
                 ],
+              ),
+            ),
+
+            // Open VERIFY item flag per Spec §6.2 and Implementation Plan Sprint 10
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
+              child: Text(
+                '*Free transfers bank up to 5 [VERIFY]. Wildcard/Free Hit preserves banked transfers [VERIFY].',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppTokens.textDisabled,
+                  fontSize: 10.5,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
 
@@ -348,10 +469,16 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          if (_selectedHorizon == h) return;
           setState(() {
             _selectedHorizon = h;
+            if (_baseH1Move != null) {
+              _recommendedMove = TransferOptimiser.deriveMultiHorizonMove(_baseH1Move!, h);
+            }
           });
-          _runOptimiser();
+          if (_baseH1Move == null && !_isOptimizing) {
+            _runOptimiser();
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8.0),

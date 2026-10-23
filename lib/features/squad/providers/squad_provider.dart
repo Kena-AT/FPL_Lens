@@ -184,7 +184,10 @@ class SquadNotifier extends StateNotifier<SquadState> {
     List<TransferItemModel> rawTransfers = [];
     try {
       currentGwResp = await _fplRepo.getCurrentGameweek();
-      squadResp = await _fplRepo.getSquad(teamId, gw: currentGwResp.current?.id, force: force);
+      final effectiveGw = (currentGwResp.current?.id != null && currentGwResp.current!.id <= 38)
+          ? currentGwResp.current!.id
+          : null;
+      squadResp = await _fplRepo.getSquad(teamId, gw: effectiveGw, force: force);
 
       // Also fetch transfers for price derivation
       rawTransfers = await _fplRepo.getTransfers(teamId);

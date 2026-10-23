@@ -148,11 +148,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               title: 'Notifications',
               value: 'Deadline reminders and injury alerts',
               trailing: const Icon(Icons.chevron_right, color: AppTokens.textDisabled),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notifications settings opened.')),
-                );
-              },
+              onTap: () => context.push('/settings/notifications'),
             ),
             _buildTile(
               title: 'AI key for screenshots',

@@ -65,7 +65,9 @@ module = [
     "fpl_lens.services.token",
     "fpl_lens.services.ingestion",
     "fpl_lens.services.cache",
+    "fpl_lens.services.notifications",
     "fpl_lens.api.app",
+    "firebase_admin.*",
 ]
 ignore_errors = true
 

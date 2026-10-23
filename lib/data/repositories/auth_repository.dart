@@ -151,6 +151,35 @@ class AuthRepository {
     }
   }
 
+  Future<Map<String, dynamic>> getNotificationPreferences() async {
+    try {
+      final res = await _dio.get('/api/v1/me/notifications');
+      return res.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateNotificationPreferences({
+    required bool deadlineReminders,
+    required bool injuryAlerts,
+    required int deadlineReminderHours,
+  }) async {
+    try {
+      final res = await _dio.put(
+        '/api/v1/me/notifications',
+        data: {
+          'deadline_reminders': deadlineReminders,
+          'injury_alerts': injuryAlerts,
+          'deadline_reminder_hours': deadlineReminderHours,
+        },
+      );
+      return res.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
   Future<void> deleteAccount() async {
     try {
       await _dio.delete('/api/v1/me');
