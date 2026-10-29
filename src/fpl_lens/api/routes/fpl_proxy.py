@@ -108,7 +108,15 @@ async def get_team_squad(
             .limit(1)
         )
         current_gw_id = db.execute(stmt).scalar_one_or_none()
-        target_gw = current_gw_id if current_gw_id is not None else 1
+        if current_gw_id is not None:
+            target_gw = current_gw_id
+        else:
+            entry = await fpl_client.get_entry(team_id)
+            cur_event = entry.get("current_event") if entry else None
+            if isinstance(cur_event, int) and 1 <= cur_event <= 38:
+                target_gw = cur_event
+            else:
+                target_gw = 1
 
     cache_key = f"fpl:entry:{team_id}:squad:{target_gw}"
     if not force:
@@ -124,6 +132,7 @@ async def get_team_squad(
             cur_event = entry.get("current_event") if entry else None
             if isinstance(cur_event, int) and cur_event != target_gw and 1 <= cur_event <= 38:
                 target_gw = cur_event
+                cache_key = f"fpl:entry:{team_id}:squad:{target_gw}"
                 data = await fpl_client.get_picks(team_id, target_gw)
 
         if data is None:

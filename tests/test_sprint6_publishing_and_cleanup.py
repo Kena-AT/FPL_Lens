@@ -311,37 +311,51 @@ def test_get_current_gameweek(client: TestClient, db_session: Session):
     Verifies GET /api/v1/gameweeks/current returns current and next gameweeks.
     """
     now = datetime.now(UTC)
-    # Ensure other gameweeks do not have current/next flags
-    db_session.query(Gameweek).update({"is_current": False, "is_next": False})
-    db_session.commit()
+    orig_cur = [gw.id for gw in db_session.query(Gameweek).filter(Gameweek.id <= 38, Gameweek.is_current.is_(True)).all()]
+    orig_nxt = [gw.id for gw in db_session.query(Gameweek).filter(Gameweek.id <= 38, Gameweek.is_next.is_(True)).all()]
+    try:
+        # Ensure other gameweeks do not have current/next flags
+        db_session.query(Gameweek).update({"is_current": False, "is_next": False})
+        db_session.commit()
 
-    gw1 = Gameweek(
-        id=88,
-        name="Gameweek 88",
-        deadline_time=now + timedelta(hours=6),
-        finished=False,
-        is_current=True,
-        is_next=False,
-    )
-    gw2 = Gameweek(
-        id=89,
-        name="Gameweek 89",
-        deadline_time=now + timedelta(days=7),
-        finished=False,
-        is_current=False,
-        is_next=True,
-    )
-    db_session.merge(gw1)
-    db_session.merge(gw2)
-    db_session.commit()
+        gw1 = Gameweek(
+            id=88,
+            name="Gameweek 88",
+            deadline_time=now + timedelta(hours=6),
+            finished=False,
+            is_current=True,
+            is_next=False,
+        )
+        gw2 = Gameweek(
+            id=89,
+            name="Gameweek 89",
+            deadline_time=now + timedelta(days=7),
+            finished=False,
+            is_current=False,
+            is_next=True,
+        )
+        db_session.merge(gw1)
+        db_session.merge(gw2)
+        db_session.commit()
 
-    resp = client.get("/api/v1/gameweeks/current")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["current"]["id"] == 88
-    assert data["current"]["is_current"] is True
-    assert data["next"]["id"] == 89
-    assert data["next"]["is_next"] is True
+        resp = client.get("/api/v1/gameweeks/current")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["current"]["id"] == 88
+        assert data["current"]["is_current"] is True
+        assert data["next"]["id"] == 89
+        assert data["next"]["is_next"] is True
+    finally:
+        db_session.query(PublishedProjection).filter(PublishedProjection.gameweek.in_([88, 89])).delete(synchronize_session=False)
+        db_session.query(PlayerFixtureStat).filter(PlayerFixtureStat.gameweek.in_([88, 89])).delete(synchronize_session=False)
+        db_session.query(ProjectionRun).filter(ProjectionRun.gameweek.in_([88, 89])).delete(synchronize_session=False)
+        db_session.query(Fixture).filter(Fixture.gameweek.in_([88, 89])).delete(synchronize_session=False)
+        db_session.query(Gameweek).filter(Gameweek.id.in_([88, 89])).delete(synchronize_session=False)
+        if orig_cur:
+            db_session.query(Gameweek).filter(Gameweek.id.in_(orig_cur)).update({"is_current": True})
+        if orig_nxt:
+            db_session.query(Gameweek).filter(Gameweek.id.in_(orig_nxt)).update({"is_next": True})
+        db_session.commit()
 
 
 def test_get_fixtures(client: TestClient, db_session: Session):

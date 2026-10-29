@@ -431,6 +431,24 @@ class SquadNotifier extends StateNotifier<SquadState> {
     await _db.replaceSquad(updatedList);
   }
 
+  /// Saves squad players resolved via OCR screenshot scanning per Sprint 11.
+  /// Purchase prices are marked as 'CONFIRM' per Spec.
+  Future<void> saveScanResolvedSquad(List<SquadPlayersTableCompanion> companions) async {
+    await _db.replaceSquad(companions);
+    for (final p in companions) {
+      await _db.upsertPurchasePrice(
+        playerFplId: p.fplId.value,
+        purchasePriceTenths: p.purchasePriceTenths.value,
+        source: 'CONFIRM',
+        isConfirmed: false,
+      );
+    }
+    state = state.copyWith(
+      step: SquadLoadingStep.completed,
+      lastSyncTime: DateTime.now(),
+    );
+  }
+
   static String _defaultPosition(int positionOrder) {
     if (positionOrder == 1 || positionOrder == 12) return 'GK';
     if (positionOrder >= 2 && positionOrder <= 5) return 'DEF';
