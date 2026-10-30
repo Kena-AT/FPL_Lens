@@ -50,7 +50,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final user = ref.read(authNotifierProvider).user;
       if (user?.isEmailVerified ?? false) {
         if (user?.hasSquad ?? false) {
-          context.go('/home');
+          context.go('/onboarding/load', extra: user!.fplTeamId);
         } else {
           context.go('/onboarding/team');
         }

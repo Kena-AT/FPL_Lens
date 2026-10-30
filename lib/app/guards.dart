@@ -3,7 +3,12 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/providers/auth_provider.dart';
 
 abstract final class AppGuards {
-  static String? redirect(BuildContext context, GoRouterState state, AuthState authState) {
+  static String? redirect(
+    BuildContext context,
+    GoRouterState state,
+    AuthState authState, {
+    bool hasAiKey = false,
+  }) {
     final location = state.uri.path;
 
     final isSplash = location == '/';
@@ -32,10 +37,18 @@ abstract final class AppGuards {
     if (authState.status == AuthStatus.authenticatedVerified) {
       final hasSquad = authState.user?.hasSquad ?? false;
       if (isAuth || isRegister || isVerify) {
-        return hasSquad ? '/home' : '/onboarding/team';
+        return hasSquad ? '/onboarding/load' : '/onboarding/team';
       }
+
+      // 6. AI key: /scan with no stored key goes to /settings/ai?next=/scan per §B6
+      if (location == '/scan' && !hasAiKey) {
+        return '/settings/ai?next=/scan';
+      }
+
       final isOnboarding = location.startsWith('/onboarding');
-      if (!hasSquad && !isOnboarding) {
+      final isSettings = location.startsWith('/settings');
+      final isScan = location.startsWith('/scan');
+      if (!hasSquad && !isOnboarding && !isSettings && !isScan) {
         return '/onboarding/team';
       }
     }

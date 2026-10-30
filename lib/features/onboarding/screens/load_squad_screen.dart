@@ -6,6 +6,7 @@ import '../../../core/network/error_mapper.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../squad/providers/squad_provider.dart';
 
 class LoadSquadScreen extends ConsumerStatefulWidget {
@@ -33,8 +34,18 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(squadNotifierProvider.notifier).loadSquadSequence(widget.teamId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      int id = widget.teamId;
+      if (id <= 0) {
+        final secureStore = ref.read(secureStoreProvider);
+        final user = ref.read(authNotifierProvider).user;
+        id = user?.fplTeamId ?? (await secureStore.getFplTeamId()) ?? 0;
+      }
+      if (id > 0) {
+        ref.read(squadNotifierProvider.notifier).loadSquadSequence(id, force: true);
+      } else if (mounted) {
+        context.go('/onboarding/team');
+      }
     });
   }
 

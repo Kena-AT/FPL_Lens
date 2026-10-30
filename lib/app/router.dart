@@ -12,6 +12,11 @@ import '../features/onboarding/screens/load_squad_screen.dart';
 import '../features/onboarding/screens/team_check_screen.dart';
 import '../features/lineup/screens/heatmap_screen.dart';
 import '../features/player/screens/player_detail_screen.dart';
+import '../data/models/squad_resolve_models.dart';
+import '../features/ai_providers/providers/ai_key_provider.dart';
+import '../features/scan/screens/resolve_players_screen.dart';
+import '../features/scan/screens/scan_squad_screen.dart';
+import '../features/settings/screens/ai_key_screen.dart';
 import '../features/settings/screens/notifications_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../features/squad/screens/purchase_prices_screen.dart';
@@ -40,7 +45,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     redirect: (context, state) {
       final authState = ref.read(authNotifierProvider);
-      return AppGuards.redirect(context, state, authState);
+      final hasAiKey = ref.read(aiKeyProvider).isConfigured;
+      return AppGuards.redirect(context, state, authState, hasAiKey: hasAiKey);
     },
     routes: [
       GoRoute(
@@ -123,6 +129,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HeatmapScreen(),
       ),
       GoRoute(
+        path: '/scan',
+        name: 'scan',
+        builder: (context, state) => const ScanSquadScreen(),
+      ),
+      GoRoute(
+        path: '/scan/resolve',
+        name: 'resolvePlayers',
+        builder: (context, state) {
+          final resolveResponse = state.extra as SquadResolveResponse? ??
+              const SquadResolveResponse(
+                allResolved: false,
+                totalSubmitted: 0,
+                resolvedCount: 0,
+                unresolvedCount: 0,
+                results: [],
+              );
+          return ResolvePlayersScreen(resolveResponse: resolveResponse);
+        },
+      ),
+      GoRoute(
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsScreen(),
@@ -131,6 +157,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'notifications',
             name: 'notifications',
             builder: (context, state) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: 'ai',
+            name: 'aiKeySetup',
+            builder: (context, state) {
+              final next = state.uri.queryParameters['next'];
+              return AiKeySetupScreen(next: next);
+            },
           ),
         ],
       ),
