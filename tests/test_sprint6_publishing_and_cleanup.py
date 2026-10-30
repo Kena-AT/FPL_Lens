@@ -311,8 +311,18 @@ def test_get_current_gameweek(client: TestClient, db_session: Session):
     Verifies GET /api/v1/gameweeks/current returns current and next gameweeks.
     """
     now = datetime.now(UTC)
-    orig_cur = [gw.id for gw in db_session.query(Gameweek).filter(Gameweek.id <= 38, Gameweek.is_current.is_(True)).all()]
-    orig_nxt = [gw.id for gw in db_session.query(Gameweek).filter(Gameweek.id <= 38, Gameweek.is_next.is_(True)).all()]
+    orig_cur = [
+        gw.id
+        for gw in db_session.query(Gameweek)
+        .filter(Gameweek.id <= 38, Gameweek.is_current.is_(True))
+        .all()
+    ]
+    orig_nxt = [
+        gw.id
+        for gw in db_session.query(Gameweek)
+        .filter(Gameweek.id <= 38, Gameweek.is_next.is_(True))
+        .all()
+    ]
     try:
         # Ensure other gameweeks do not have current/next flags
         db_session.query(Gameweek).update({"is_current": False, "is_next": False})
@@ -346,13 +356,25 @@ def test_get_current_gameweek(client: TestClient, db_session: Session):
         assert data["next"]["id"] == 89
         assert data["next"]["is_next"] is True
     finally:
-        db_session.query(PublishedProjection).filter(PublishedProjection.gameweek.in_([88, 89])).delete(synchronize_session=False)
-        db_session.query(PlayerFixtureStat).filter(PlayerFixtureStat.gameweek.in_([88, 89])).delete(synchronize_session=False)
-        db_session.query(ProjectionRun).filter(ProjectionRun.gameweek.in_([88, 89])).delete(synchronize_session=False)
-        db_session.query(Fixture).filter(Fixture.gameweek.in_([88, 89])).delete(synchronize_session=False)
-        db_session.query(Gameweek).filter(Gameweek.id.in_([88, 89])).delete(synchronize_session=False)
+        db_session.query(PublishedProjection).filter(
+            PublishedProjection.gameweek.in_([88, 89])
+        ).delete(synchronize_session=False)
+        db_session.query(PlayerFixtureStat).filter(PlayerFixtureStat.gameweek.in_([88, 89])).delete(
+            synchronize_session=False
+        )
+        db_session.query(ProjectionRun).filter(ProjectionRun.gameweek.in_([88, 89])).delete(
+            synchronize_session=False
+        )
+        db_session.query(Fixture).filter(Fixture.gameweek.in_([88, 89])).delete(
+            synchronize_session=False
+        )
+        db_session.query(Gameweek).filter(Gameweek.id.in_([88, 89])).delete(
+            synchronize_session=False
+        )
         if orig_cur:
-            db_session.query(Gameweek).filter(Gameweek.id.in_(orig_cur)).update({"is_current": True})
+            db_session.query(Gameweek).filter(Gameweek.id.in_(orig_cur)).update(
+                {"is_current": True}
+            )
         if orig_nxt:
             db_session.query(Gameweek).filter(Gameweek.id.in_(orig_nxt)).update({"is_next": True})
         db_session.commit()

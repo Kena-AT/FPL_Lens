@@ -15,9 +15,11 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
 from fpl_lens.db.session import Base
@@ -142,7 +144,7 @@ class Player(Base):
     web_name = Column(String(64), nullable=False)
     position: Column[str] = Column(PlayerPositionEnum, nullable=False)
     team_fpl_id = Column(Integer, ForeignKey("teams.fpl_id"), nullable=False)
-    now_cost = Column(Integer, nullable=False)  # tenths of £m
+    now_cost = Column(Integer, nullable=False)  # tenths of Â£m
     status = Column(String(2), nullable=False)
     chance_of_playing_next_round = Column(Integer, nullable=True)
     news = Column(Text, nullable=True)
@@ -313,10 +315,6 @@ class AuditEvent(Base):
     target_id = Column(String(64), nullable=True)
     ip_hash = Column(LargeBinary, nullable=True)
     audit_metadata = Column("metadata", JSONB, nullable=True)
-
-
-from sqlalchemy import event
-from sqlalchemy.orm import Session
 
 
 @event.listens_for(Session, "before_flush")

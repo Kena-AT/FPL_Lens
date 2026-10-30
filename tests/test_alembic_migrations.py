@@ -1,7 +1,8 @@
 import subprocess
 import sys
-from fpl_lens.db.session import SessionLocal
+
 from fpl_lens.db.models import User
+from fpl_lens.db.session import SessionLocal
 
 
 def test_migration_roundtrip():
@@ -39,7 +40,9 @@ def test_migration_roundtrip():
     session = SessionLocal()
     try:
         owner_after = session.query(User).filter(User.email == "kenakaye11@gmail.com").first()
-        assert owner_after is not None, "Owner account kenakaye11@gmail.com was removed during migration test!"
+        assert owner_after is not None, (
+            "Owner account kenakaye11@gmail.com was removed during migration test!"
+        )
         assert owner_after.status == "active"
     finally:
         session.close()

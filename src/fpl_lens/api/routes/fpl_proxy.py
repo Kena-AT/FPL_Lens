@@ -90,7 +90,8 @@ def _enrich_picks(db: Session, data: dict[str, Any]) -> dict[str, Any]:
     missing_elements = [
         p.get("element")
         for p in picks
-        if p.get("element") and (not p.get("web_name") or str(p.get("web_name", "")).startswith("Player "))
+        if p.get("element")
+        and (not p.get("web_name") or str(p.get("web_name", "")).startswith("Player "))
     ]
     if not missing_elements:
         return data
@@ -160,7 +161,7 @@ async def get_team_squad(
     cache_key = f"fpl:entry:{team_id}:squad:{target_gw}"
     if not force:
         cached = get_cached_value(db, cache_key)
-        if cached is not None:
+        if isinstance(cached, dict):
             enriched_cached = _enrich_picks(db, cached)
             return JSONResponse(content=enriched_cached, headers={"X-Data-Status": "FRESH"})
 
@@ -198,7 +199,8 @@ async def get_team_squad(
         stale = get_stale_cached_value(db, cache_key)
         if stale is not None:
             value, expires_at = stale
-            enriched_stale = _enrich_picks(db, value)
+            if isinstance(value, dict):
+                enriched_stale = _enrich_picks(db, value)
             return JSONResponse(
                 content=enriched_stale,
                 headers={"X-Data-Status": "STALE", "X-Cached-At": expires_at.isoformat()},

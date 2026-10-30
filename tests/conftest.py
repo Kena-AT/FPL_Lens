@@ -100,20 +100,29 @@ def cleanup_test_gameweeks():
             PublishedProjection,
         )
 
-        test_gw_ids = [
-            gw[0]
-            for gw in session.query(Gameweek.id).filter(Gameweek.id > 38).all()
-        ]
+        test_gw_ids = [gw[0] for gw in session.query(Gameweek.id).filter(Gameweek.id > 38).all()]
         if test_gw_ids:
-            session.query(PublishedProjection).filter(PublishedProjection.gameweek.in_(test_gw_ids)).delete(synchronize_session=False)
-            session.query(PlayerFixtureStat).filter(PlayerFixtureStat.gameweek.in_(test_gw_ids)).delete(synchronize_session=False)
-            session.query(ProjectionRun).filter(ProjectionRun.gameweek.in_(test_gw_ids)).delete(synchronize_session=False)
-            session.query(Fixture).filter(Fixture.gameweek.in_(test_gw_ids)).delete(synchronize_session=False)
-            session.query(Gameweek).filter(Gameweek.id.in_(test_gw_ids)).delete(synchronize_session=False)
+            session.query(PublishedProjection).filter(
+                PublishedProjection.gameweek.in_(test_gw_ids)
+            ).delete(synchronize_session=False)
+            session.query(PlayerFixtureStat).filter(
+                PlayerFixtureStat.gameweek.in_(test_gw_ids)
+            ).delete(synchronize_session=False)
+            session.query(ProjectionRun).filter(ProjectionRun.gameweek.in_(test_gw_ids)).delete(
+                synchronize_session=False
+            )
+            session.query(Fixture).filter(Fixture.gameweek.in_(test_gw_ids)).delete(
+                synchronize_session=False
+            )
+            session.query(Gameweek).filter(Gameweek.id.in_(test_gw_ids)).delete(
+                synchronize_session=False
+            )
 
         if orig_current:
             session.query(Gameweek).filter(Gameweek.id <= 38).update({"is_current": False})
-            session.query(Gameweek).filter(Gameweek.id.in_(orig_current)).update({"is_current": True})
+            session.query(Gameweek).filter(Gameweek.id.in_(orig_current)).update(
+                {"is_current": True}
+            )
         if orig_next:
             session.query(Gameweek).filter(Gameweek.id <= 38).update({"is_next": False})
             session.query(Gameweek).filter(Gameweek.id.in_(orig_next)).update({"is_next": True})

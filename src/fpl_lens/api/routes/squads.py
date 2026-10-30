@@ -82,14 +82,16 @@ def resolve_squad_names(
         norm_first = _normalize_name(player.first_name)
         norm_second = _normalize_name(player.second_name)
         norm_full = f"{norm_first} {norm_second}".strip()
-        player_records.append({
-            "player": player,
-            "team_short": team_short,
-            "norm_web": norm_web,
-            "norm_first": norm_first,
-            "norm_second": norm_second,
-            "norm_full": norm_full,
-        })
+        player_records.append(
+            {
+                "player": player,
+                "team_short": team_short,
+                "norm_web": norm_web,
+                "norm_first": norm_first,
+                "norm_second": norm_second,
+                "norm_full": norm_full,
+            }
+        )
 
     results: list[ResolvedPlayerResult] = []
 
@@ -153,7 +155,9 @@ def resolve_squad_names(
             )
 
         best_score = top_candidates[0][0] if top_candidates else 0.0
-        best_id = top_candidates[0][1]["player"].fpl_id if top_candidates and best_score >= 0.60 else None
+        best_id = (
+            top_candidates[0][1]["player"].fpl_id if top_candidates and best_score >= 0.60 else None
+        )
         exact = best_score >= 0.85
 
         results.append(

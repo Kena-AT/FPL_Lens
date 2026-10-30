@@ -184,9 +184,7 @@ async def test_dispatch_injury_alerts_decision_a7(db_session: Session):
             NotificationDispatchService, "send_push_notification", return_value=True
         ) as mock_send,
     ):
-        result = await dispatch_injury_alerts(
-            db_session, user_ids=[user_a.id, user_b.id]
-        )
+        result = await dispatch_injury_alerts(db_session, user_ids=[user_a.id, user_b.id])
 
         assert result["status"] == "ok"
         # Only User A should be notified (owns flagged player 9901)

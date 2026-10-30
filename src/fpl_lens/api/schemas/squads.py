@@ -10,8 +10,14 @@ from pydantic import BaseModel, ConfigDict, Field
 class SquadResolvePlayerInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    raw_name: str = Field(..., min_length=1, max_length=100, description="Raw player name from OCR extraction")
-    slot: str | None = Field(None, max_length=32, description="Extracted squad slot, e.g. 'GKP', 'DEF', 'MID', 'FWD', 'Sub 1'")
+    raw_name: str = Field(
+        ..., min_length=1, max_length=100, description="Raw player name from OCR extraction"
+    )
+    slot: str | None = Field(
+        None,
+        max_length=32,
+        description="Extracted squad slot, e.g. 'GKP', 'DEF', 'MID', 'FWD', 'Sub 1'",
+    )
 
 
 class SquadResolveRequest(BaseModel):
