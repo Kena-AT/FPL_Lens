@@ -142,8 +142,16 @@ def delete_my_account(
     """
     Initiates 3-day account deletion.
     Tokens are revoked immediately, status set to pending_deletion.
+    Owner account is strictly protected.
     """
     response.headers["Cache-Control"] = "no-store"
+    if current_user.email == "kenakaye11@gmail.com":
+        raise AppError(
+            code="ACCOUNT_PROTECTED",
+            message="This account is protected and cannot be deleted.",
+            status_code=403,
+        )
+
     client_ip = get_client_ip(request)
 
     current_user.status = "pending_deletion"

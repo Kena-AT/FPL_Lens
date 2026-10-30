@@ -151,4 +151,32 @@ abstract class OpenAiCompatibleAdapter extends AiProviderAdapter {
     }
     return [];
   }
+  @override
+  Future<String> generateText({
+    required String prompt,
+    required String key,
+    required Dio dio,
+  }) async {
+    final response = await dio.post(
+      baseUrl,
+      data: {
+        'model': defaultModel,
+        'max_tokens': 500,
+        'messages': [
+          {'role': 'user', 'content': prompt}
+        ]
+      },
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer ${key.trim()}',
+          'Content-Type': 'application/json',
+        },
+      ),
+    );
+    final choices = response.data['choices'] as List?;
+    if (choices != null && choices.isNotEmpty) {
+      return choices[0]['message']?['content'] as String? ?? '';
+    }
+    return '';
+  }
 }

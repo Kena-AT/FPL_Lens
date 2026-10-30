@@ -81,6 +81,45 @@ async def get_team_entry(
         ) from exc
 
 
+def _enrich_picks(db: Session, data: dict[str, Any]) -> dict[str, Any]:
+    """Enriches picks with player details from the DB if any pick lacks web_name."""
+    picks = data.get("picks", [])
+    if not picks:
+        return data
+
+    missing_elements = [
+        p.get("element")
+        for p in picks
+        if p.get("element") and (not p.get("web_name") or str(p.get("web_name", "")).startswith("Player "))
+    ]
+    if not missing_elements:
+        return data
+
+    players_stmt: Any = (
+        select(Player, Team.short_name)
+        .outerjoin(Team, Player.team_fpl_id == Team.fpl_id)
+        .where(Player.fpl_id.in_(missing_elements))
+    )
+    player_rows = db.execute(players_stmt).all()
+    player_map = {
+        p.fpl_id: {
+            "web_name": p.web_name,
+            "player_position": p.position,
+            "team_fpl_id": p.team_fpl_id,
+            "team_short_name": short_name or "PL",
+            "now_cost": p.now_cost,
+            "status": p.status,
+            "chance_of_playing_next_round": p.chance_of_playing_next_round,
+        }
+        for p, short_name in player_rows
+    }
+    for pick in picks:
+        pid = pick.get("element")
+        if pid in player_map:
+            pick.update(player_map[pid])
+    return data
+
+
 @router.get("/entry/{team_id}/squad")
 async def get_team_squad(
     team_id: int,
@@ -122,7 +161,8 @@ async def get_team_squad(
     if not force:
         cached = get_cached_value(db, cache_key)
         if cached is not None:
-            return JSONResponse(content=cached, headers={"X-Data-Status": "FRESH"})
+            enriched_cached = _enrich_picks(db, cached)
+            return JSONResponse(content=enriched_cached, headers={"X-Data-Status": "FRESH"})
 
     try:
         data = await fpl_client.get_picks(team_id, target_gw)
@@ -143,30 +183,7 @@ async def get_team_squad(
             )
 
         # Enrich picks with player details from the database so the frontend has names, teams, and prices
-        pick_elements = [p.get("element") for p in data.get("picks", []) if p.get("element")]
-        if pick_elements:
-            players_stmt: Any = (
-                select(Player, Team.short_name)
-                .outerjoin(Team, Player.team_fpl_id == Team.fpl_id)
-                .where(Player.fpl_id.in_(pick_elements))
-            )
-            player_rows = db.execute(players_stmt).all()
-            player_map = {
-                p.fpl_id: {
-                    "web_name": p.web_name,
-                    "player_position": p.position,
-                    "team_fpl_id": p.team_fpl_id,
-                    "team_short_name": short_name or "PL",
-                    "now_cost": p.now_cost,
-                    "status": p.status,
-                    "chance_of_playing_next_round": p.chance_of_playing_next_round,
-                }
-                for p, short_name in player_rows
-            }
-            for pick in data.get("picks", []):
-                pid = pick.get("element")
-                if pid in player_map:
-                    pick.update(player_map[pid])
+        data = _enrich_picks(db, data)
 
         set_cached_value(db, cache_key, data, ttl_seconds=settings.FPL_CACHE_TTL_SECONDS)
         return JSONResponse(content=data, headers={"X-Data-Status": "FRESH"})
@@ -181,8 +198,9 @@ async def get_team_squad(
         stale = get_stale_cached_value(db, cache_key)
         if stale is not None:
             value, expires_at = stale
+            enriched_stale = _enrich_picks(db, value)
             return JSONResponse(
-                content=value,
+                content=enriched_stale,
                 headers={"X-Data-Status": "STALE", "X-Cached-At": expires_at.isoformat()},
             )
         raise AppError(

@@ -52,7 +52,7 @@ class _AiKeySetupScreenState extends ConsumerState<AiKeySetupScreen> {
   void _onKeyChanged(String value) {
     final trimmed = value.trim();
     String? detectedProvider;
-    if (trimmed.startsWith('AIzaSy')) {
+    if (trimmed.startsWith('AIzaSy') || trimmed.startsWith('AQ')) {
       detectedProvider = 'google_gemini';
     } else if (trimmed.startsWith('sk-ant-')) {
       detectedProvider = 'anthropic_claude';

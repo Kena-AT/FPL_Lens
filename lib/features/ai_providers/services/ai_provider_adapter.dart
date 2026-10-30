@@ -42,6 +42,12 @@ abstract class AiProviderAdapter {
     bool strict = false,
   });
 
+  Future<String> generateText({
+    required String prompt,
+    required String key,
+    required Dio dio,
+  }) async => '';
+
   /// Helper to parse players array from AI output string.
   List<ExtractedPlayer> parsePlayersJson(String content) {
     // Strip markdown code fences if present

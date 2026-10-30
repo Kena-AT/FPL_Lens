@@ -313,3 +313,17 @@ class AuditEvent(Base):
     target_id = Column(String(64), nullable=True)
     ip_hash = Column(LargeBinary, nullable=True)
     audit_metadata = Column("metadata", JSONB, nullable=True)
+
+
+from sqlalchemy import event
+from sqlalchemy.orm import Session
+
+
+@event.listens_for(Session, "before_flush")
+def protect_owner_account_from_deletion(session, flush_context, instances):
+    for obj in session.deleted:
+        if isinstance(obj, User):
+            if obj.email == "kenakaye11@gmail.com" or getattr(obj, "fpl_team_id", None) == 2354349:
+                raise RuntimeError(
+                    "CRITICAL VIOLATION: Deletion of protected owner account kenakaye11@gmail.com is forbidden!"
+                )

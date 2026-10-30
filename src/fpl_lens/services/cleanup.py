@@ -13,27 +13,32 @@ from sqlalchemy.orm import Session
 from fpl_lens.db.models import CacheEntry, EmailCode, RefreshToken, User
 from fpl_lens.logging import logger
 
+PROTECTED_EMAILS = {"kenakaye11@gmail.com"}
+
 
 def cleanup_expired_accounts(db: Session, grace_days: int = 3) -> dict[str, int]:
     """
     Deletes unverified accounts older than grace_days (3 days)
     and pending-deletion accounts whose deletion request is older than grace_days (3 days).
     Enforces the strict 3-day grace period rule (AGENTS.md §8.6).
+    Excludes protected owner accounts (e.g. kenakaye11@gmail.com).
     """
     cutoff = datetime.now(UTC) - timedelta(days=grace_days)
 
-    # 1. Unverified accounts older than 3 days
+    # 1. Unverified accounts older than 3 days (excluding protected accounts)
     unverified_stmt = delete(User).where(
         User.status == "unverified",
         cast(ColumnElement[bool], User.created_at <= cutoff),
+        User.email.notin_(PROTECTED_EMAILS),
     )
     res_unverified: Any = db.execute(unverified_stmt)
     unverified_deleted: int = getattr(res_unverified, "rowcount", 0)
 
-    # 2. Accounts pending deletion requested > 3 days ago
+    # 2. Accounts pending deletion requested > 3 days ago (excluding protected accounts)
     pending_stmt = delete(User).where(
         User.status == "pending_deletion",
         cast(ColumnElement[bool], User.deletion_requested_at <= cutoff),
+        User.email.notin_(PROTECTED_EMAILS),
     )
     res_pending: Any = db.execute(pending_stmt)
     pending_deleted: int = getattr(res_pending, "rowcount", 0)

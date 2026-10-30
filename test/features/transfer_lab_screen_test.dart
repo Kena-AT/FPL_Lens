@@ -139,4 +139,50 @@ void main() {
 
     expect(find.text('Select Player'), findsOneWidget);
   });
+
+  testWidgets('TransferLabScreen displays strategy tabs, chips evaluation and AI tactical advisor card', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final squad = generate15Players();
+    final state = SquadState(
+      squad: squad,
+      bankTenths: 20,
+      freeTransfers: 1,
+      currentGameweek: const GameweekMetadata(id: 8, name: 'Gameweek 8'),
+      nextGameweek: const GameweekMetadata(id: 9, name: 'Gameweek 9'),
+    );
+
+    await tester.pumpWidget(buildScreen(state));
+    await tester.pumpAndSettle();
+
+    // Verify Strategy tabs
+    expect(find.text('Optimal (Auto)'), findsOneWidget);
+    expect(find.text('1 Transfer'), findsOneWidget);
+    expect(find.text('Multi-Transfer'), findsOneWidget);
+
+    // Tap Multi-Transfer
+    await tester.tap(find.text('Multi-Transfer'));
+    await tester.pumpAndSettle();
+
+    // Tap Find Optimal Transfers
+    await tester.tap(find.text('Find Optimal Transfers'));
+    await tester.pump();
+    for (int i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      if (find.text('PROJECTED LINEUP').evaluate().isNotEmpty) break;
+    }
+
+    // Verify Chip Evaluation section
+    expect(find.text('CHIP TACTICAL EVALUATION'), findsOneWidget);
+    expect(find.text('Triple Captain'), findsOneWidget);
+    expect(find.text('Wildcard'), findsOneWidget);
+    expect(find.text('Free Hit'), findsOneWidget);
+
+    // Verify AI Tactical Advisor section
+    expect(find.text('AI TACTICAL ADVISOR'), findsOneWidget);
+    expect(find.text('Ask AI Tactical Advisor'), findsOneWidget);
+  });
 }

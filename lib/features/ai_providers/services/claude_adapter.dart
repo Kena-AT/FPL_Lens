@@ -161,4 +161,34 @@ class ClaudeAdapter extends AiProviderAdapter {
     }
     return [];
   }
+  @override
+  Future<String> generateText({
+    required String prompt,
+    required String key,
+    required Dio dio,
+  }) async {
+    const url = 'https://api.anthropic.com/v1/messages';
+    final response = await dio.post(
+      url,
+      data: {
+        'model': defaultModel,
+        'max_tokens': 500,
+        'messages': [
+          {'role': 'user', 'content': prompt}
+        ]
+      },
+      options: Options(
+        headers: {
+          'x-api-key': key.trim(),
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+      ),
+    );
+    final content = response.data['content'] as List?;
+    if (content != null && content.isNotEmpty) {
+      return content[0]['text'] as String? ?? '';
+    }
+    return '';
+  }
 }

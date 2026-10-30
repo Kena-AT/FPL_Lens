@@ -1,8 +1,9 @@
 """
-Projections and reference API routes per Backend Design §7.2, §11.2.
+Projections and reference API routes per Backend Design Â§7.2, Â§11.2.
 Serves published projection bundles, player lookups, current gameweeks, fixtures, and player search.
 """
 
+from datetime import UTC, datetime
 import hashlib
 import json
 from typing import Any, cast
@@ -216,7 +217,16 @@ def get_current_gameweek(db: Session = Depends(get_db)) -> JSONResponse:
         .first()
     )
 
-    if not current_gw and not next_gw:
+    now = datetime.now(UTC)
+    if not current_gw:
+        current_gw = (
+            db.query(Gameweek)
+            .filter(Gameweek.finished.is_(True))
+            .order_by(Gameweek.id.desc())
+            .first()
+        )
+
+    if not next_gw or (next_gw.finished and next_gw.deadline_time and next_gw.deadline_time < now):
         # Fallback to earliest unfinished gameweek
         next_gw = (
             db.query(Gameweek)
@@ -285,12 +295,12 @@ def get_fixtures(
 @router.get("/players/search")
 def search_players(
     q: str = Query(default="", min_length=0, description="Player name search query"),
-    limit: int = Query(default=10, ge=1, le=50, description="Max results"),
+    limit: int = Query(default=10, ge=1, le=1000, description="Max results"),
     _: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     """
-    Name lookup used for screenshot resolution and manual squad entry per Backend Design §11.2.
+    Name lookup used for screenshot resolution and manual squad entry per Backend Design Â§11.2.
     Requires authenticated user.
     """
     clean_q = q.strip()

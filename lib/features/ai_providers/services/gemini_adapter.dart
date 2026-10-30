@@ -20,15 +20,16 @@ class GeminiAdapter extends AiProviderAdapter {
   @override
   bool validateKeyFormat(String key) {
     final trimmed = key.trim();
-    if (trimmed.isEmpty) return false;
-    return trimmed.startsWith('AIzaSy') && trimmed.length >= 20;
+    if (trimmed.isEmpty || trimmed.length < 15) return false;
+    return true;
   }
 
   @override
   Future<ValidationResult> validate(String key, Dio dio) async {
-    if (!validateKeyFormat(key)) {
+    final trimmed = key.trim();
+    if (trimmed.isEmpty || trimmed.length < 10) {
       return ValidationResult.failure(
-        "That doesn't look like a Google Gemini key. It typically starts with 'AIzaSy'.",
+        'Please enter a valid API key.',
         'invalid_key',
       );
     }
@@ -168,5 +169,63 @@ class GeminiAdapter extends AiProviderAdapter {
       }
     }
     return [];
+  }
+  @override
+  Future<String> generateText({
+    required String prompt,
+    required String key,
+    required Dio dio,
+  }) async {
+    final url =
+        'https://generativelanguage.googleapis.com/v1beta/models/$defaultModel:generateContent?key=${key.trim()}';
+    try {
+      final response = await dio.post(
+        url,
+        data: {
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt}
+              ]
+            }
+          ],
+          'generationConfig': {'maxOutputTokens': 500},
+        },
+      );
+      final candidates = response.data['candidates'] as List?;
+      if (candidates != null && candidates.isNotEmpty) {
+        final parts = candidates[0]['content']?['parts'] as List?;
+        if (parts != null && parts.isNotEmpty) {
+          return parts[0]['text'] as String? ?? '';
+        }
+      }
+      return '';
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404 && defaultModel != 'gemini-1.5-flash') {
+        final fallbackUrl =
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key.trim()}';
+        final fallbackResp = await dio.post(
+          fallbackUrl,
+          data: {
+            'contents': [
+              {
+                'parts': [
+                  {'text': prompt}
+                ]
+              }
+            ],
+            'generationConfig': {'maxOutputTokens': 500},
+          },
+        );
+        final candidates = fallbackResp.data['candidates'] as List?;
+        if (candidates != null && candidates.isNotEmpty) {
+          final parts = candidates[0]['content']?['parts'] as List?;
+          if (parts != null && parts.isNotEmpty) {
+            return parts[0]['text'] as String? ?? '';
+          }
+        }
+      }
+      rethrow;
+    }
   }
 }
