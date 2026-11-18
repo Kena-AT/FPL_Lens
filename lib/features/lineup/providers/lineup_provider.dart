@@ -3,9 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/optimiser/lineup_optimiser.dart';
 import '../../../core/optimiser/player_candidate.dart';
 import '../../../core/storage/app_database.dart';
+import '../../../data/models/fpl_models.dart';
+import '../../../data/repositories/fpl_repository.dart';
 import '../../squad/providers/squad_provider.dart';
 
 class LineupState {
+  final int? selectedGameweek;
+  final bool isLoadingGameweek;
   final LineupResult? result;
   final LineupResult? currentResult;
   final LineupResult? recommendedResult;
@@ -17,6 +21,8 @@ class LineupState {
   final String? errorMessage;
 
   const LineupState({
+    this.selectedGameweek,
+    this.isLoadingGameweek = false,
     this.result,
     this.currentResult,
     this.recommendedResult,
@@ -29,6 +35,8 @@ class LineupState {
   });
 
   LineupState copyWith({
+    int? selectedGameweek,
+    bool? isLoadingGameweek,
     LineupResult? result,
     LineupResult? currentResult,
     LineupResult? recommendedResult,
@@ -40,6 +48,8 @@ class LineupState {
     String? errorMessage,
   }) {
     return LineupState(
+      selectedGameweek: selectedGameweek ?? this.selectedGameweek,
+      isLoadingGameweek: isLoadingGameweek ?? this.isLoadingGameweek,
       result: result ?? this.result,
       currentResult: currentResult ?? this.currentResult,
       recommendedResult: recommendedResult ?? this.recommendedResult,
@@ -284,6 +294,128 @@ class LineupNotifier extends StateNotifier<LineupState> {
   void clearOverrides() {
     state = state.copyWith(manualCaptainId: null, manualViceCaptainId: null);
     optimize();
+  }
+
+  Future<void> selectGameweek(int gw) async {
+    final squadState = _ref.read(squadNotifierProvider);
+    final latestGw = squadState.nextGameweek?.id ??
+        squadState.currentGameweek?.id ??
+        (squadState.gameweekHistory.isNotEmpty
+            ? squadState.gameweekHistory.map((g) => g.gameweek).reduce((a, b) => a > b ? a : b)
+            : 1);
+
+    if (gw >= latestGw) {
+      state = state.copyWith(selectedGameweek: gw, isLoadingGameweek: false);
+      optimize();
+      return;
+    }
+
+    state = state.copyWith(selectedGameweek: gw, isLoadingGameweek: true, errorMessage: null);
+
+    try {
+      final teamId = squadState.entry?.id;
+      if (teamId == null) {
+        state = state.copyWith(isLoadingGameweek: false, errorMessage: 'Team details not loaded');
+        return;
+      }
+
+      final fplRepo = _ref.read(fplRepositoryProvider);
+      final squadResp = await fplRepo.getSquad(teamId, gw: gw);
+
+      if (squadResp.picks.isEmpty) {
+        state = state.copyWith(isLoadingGameweek: false, errorMessage: 'No picks found for Gameweek $gw');
+        return;
+      }
+
+      // Build candidates for historical gameweek
+      final candidates = squadResp.picks.map((pick) {
+        final pos = pick.playerPosition ?? _defaultPosition(pick.position);
+        final xp = ((pick.nowCost ?? 60) / 20.0).clamp(1.5, 9.5);
+        return PlayerCandidate(
+          fplId: pick.element,
+          webName: pick.webName ?? 'Player #${pick.element}',
+          position: pos == 'GKP' ? 'GK' : pos,
+          clubId: pick.teamFplId ?? 1,
+          priceTenths: pick.nowCost ?? 60,
+          sellingPriceTenths: pick.nowCost ?? 60,
+          xp: double.parse(xp.toStringAsFixed(1)),
+          pStart: 0.95,
+          pSub: 0.05,
+        );
+      }).toList();
+
+      final candidateMap = {for (final c in candidates) c.fplId: c};
+      final sortedPicks = List<PickModel>.from(squadResp.picks)
+        ..sort((a, b) => a.position.compareTo(b.position));
+
+      final starterPicks = sortedPicks.where((p) => p.position >= 1 && p.position <= 11).toList();
+      final benchPicks = sortedPicks.where((p) => p.position >= 12 && p.position <= 15).toList();
+
+      final startingXi = starterPicks
+          .map((p) => candidateMap[p.element] ?? candidates.first)
+          .toList()
+        ..sort((a, b) {
+          final posWeight = {'GK': 0, 'DEF': 1, 'MID': 2, 'FWD': 3};
+          return (posWeight[a.position] ?? 99).compareTo(posWeight[b.position] ?? 99);
+        });
+
+      final bench = benchPicks
+          .map((p) => candidateMap[p.element] ?? candidates.first)
+          .toList();
+
+      final capPick = sortedPicks.firstWhere(
+        (p) => p.isCaptain || p.multiplier >= 2,
+        orElse: () => sortedPicks.first,
+      );
+      final vicePick = sortedPicks.firstWhere(
+        (p) => p.isViceCaptain,
+        orElse: () => sortedPicks.length > 1 ? sortedPicks[1] : sortedPicks.first,
+      );
+
+      final captain = candidateMap[capPick.element] ?? startingXi.first;
+      final viceCaptain = candidateMap[vicePick.element] ?? (startingXi.length > 1 ? startingXi[1] : startingXi.first);
+
+      final counts = LineupOptimiser.formationCounts(startingXi);
+      final formation = [
+        counts['GK'] ?? 1,
+        counts['DEF'] ?? 3,
+        counts['MID'] ?? 4,
+        counts['FWD'] ?? 3,
+      ];
+      final totalXp = startingXi.fold<double>(0.0, (sum, p) => sum + p.xp) + captain.xp;
+
+      final historicalResult = LineupResult(
+        startingXi: startingXi,
+        captain: captain,
+        viceCaptain: viceCaptain,
+        bench: bench,
+        formation: formation,
+        totalExpectedPoints: double.parse(totalXp.toStringAsFixed(1)),
+        captaincyScore: captain.xp,
+        benchOrderScore: 0.0,
+        isQuickModeFallback: false,
+      );
+
+      state = state.copyWith(
+        result: historicalResult,
+        currentResult: historicalResult,
+        recommendedResult: null,
+        isRecommendedMode: false,
+        isLoadingGameweek: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoadingGameweek: false,
+        errorMessage: 'Failed to load Gameweek $gw lineup: $e',
+      );
+    }
+  }
+
+  String _defaultPosition(int positionOrder) {
+    if (positionOrder == 1 || positionOrder == 12) return 'GK';
+    if (positionOrder <= 6) return 'DEF';
+    if (positionOrder <= 11) return 'MID';
+    return 'FWD';
   }
 }
 

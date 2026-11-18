@@ -2,6 +2,50 @@ import 'dart:math' as math;
 import 'lineup_optimiser.dart';
 import 'player_candidate.dart';
 
+/// Transfer strategy options for Transfer Lab
+enum TransferStrategy {
+  optimal,
+  singleOnly,
+  multiOnly,
+}
+
+/// FPL Chips for tactical evaluation
+enum FplChip {
+  wildcard,
+  freeHit,
+  tripleCaptain,
+  benchBoost,
+}
+
+/// Structured Chip Recommendation result
+class ChipRecommendation {
+  final FplChip chip;
+  final String title;
+  final bool isRecommended;
+  final String reason;
+  final double projectedGain;
+  final String? recommendedPlayerName;
+
+  const ChipRecommendation({
+    required this.chip,
+    required this.title,
+    required this.isRecommended,
+    required this.reason,
+    required this.projectedGain,
+    this.recommendedPlayerName,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'chip': chip.name,
+        'title': title,
+        'is_recommended': isRecommended,
+        'reason': reason,
+        'projected_gain': projectedGain,
+        'recommended_player_name': recommendedPlayerName,
+      };
+}
+
+
 /// Single transfer move recommendation.
 class TransferMove {
   final List<PlayerCandidate> transfersOut;
@@ -130,6 +174,7 @@ class TransferOptimiser {
     required List<PlayerCandidate> availablePool,
     required int bankTenths,
     required int freeTransfersAvailable,
+    TransferStrategy strategy = TransferStrategy.optimal,
   }) {
     if (currentSquad.length != 15) {
       throw ArgumentError('Current squad must contain exactly 15 players');
@@ -165,6 +210,7 @@ class TransferOptimiser {
     }
 
     // 1-Transfer Evaluation (Exact with upper-bound branch-and-bound pruning)
+    if (strategy != TransferStrategy.multiOnly) {
     for (var i = 0; i < currentSquad.length; i++) {
       final outPlayer = currentSquad[i];
       final availableBudget = bankTenths + outPlayer.sellingPriceTenths;
@@ -200,7 +246,10 @@ class TransferOptimiser {
       }
     }
 
+    }
+
     // 2-Transfer Evaluation (Top candidates per position with upper-bound pruning)
+    if (strategy != TransferStrategy.singleOnly) {
     final candidateSubset = <String, List<PlayerCandidate>>{};
     for (final pos in poolByPos.keys) {
       candidateSubset[pos] = poolByPos[pos]!.take(5).toList();
@@ -260,7 +309,150 @@ class TransferOptimiser {
       }
     }
 
+      // 3-Transfer Evaluation (Targeting weakest squad members for high-upside multi-transfer)
+      final sortedByXp = List<PlayerCandidate>.from(currentSquad)
+        ..sort((a, b) => a.xp.compareTo(b.xp));
+      final weakestSquad = sortedByXp.take(4).toList();
+
+      final hit3 = computeHitCost(3, freeTransfersAvailable);
+      final trioCandidates = <String, List<PlayerCandidate>>{};
+      for (final pos in poolByPos.keys) {
+        trioCandidates[pos] = poolByPos[pos]!.take(2).toList();
+      }
+
+      if (weakestSquad.length >= 3) {
+        for (var i = 0; i < weakestSquad.length - 2; i++) {
+          for (var j = i + 1; j < weakestSquad.length - 1; j++) {
+            for (var k = j + 1; k < weakestSquad.length; k++) {
+              final o1 = weakestSquad[i];
+              final o2 = weakestSquad[j];
+              final o3 = weakestSquad[k];
+              final threeBudget = bankTenths + o1.sellingPriceTenths + o2.sellingPriceTenths + o3.sellingPriceTenths;
+
+              final p1 = trioCandidates[o1.position] ?? const [];
+              final p2 = trioCandidates[o2.position] ?? const [];
+              final p3 = trioCandidates[o3.position] ?? const [];
+              if (p1.isEmpty || p2.isEmpty || p3.isEmpty) continue;
+
+              for (final in1 in p1) {
+                for (final in2 in p2) {
+                  if (in2.fplId == in1.fplId) continue;
+                  for (final in3 in p3) {
+                    if (in3.fplId == in1.fplId || in3.fplId == in2.fplId) continue;
+                    if (in1.priceTenths + in2.priceTenths + in3.priceTenths > threeBudget) continue;
+
+                    final newSquad = currentSquad.map((p) {
+                      if (p.fplId == o1.fplId) return in1;
+                      if (p.fplId == o2.fplId) return in2;
+                      if (p.fplId == o3.fplId) return in3;
+                      return p;
+                    }).toList();
+
+                    if (!isValidSquad(newSquad)) continue;
+
+                    final lineup = LineupOptimiser.optimizeLineup(newSquad);
+                    final netXp = lineup.totalExpectedPoints - hit3;
+
+                    if (netXp > bestMove.netExpectedPoints) {
+                      bestMove = TransferMove(
+                        transfersOut: [o1, o2, o3],
+                        transfersIn: [in1, in2, in3],
+                        hitCost: hit3,
+                        netExpectedPoints: netXp,
+                        lineupResult: lineup,
+                        horizon: 1,
+                      );
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     return bestMove;
+  }
+
+  /// Evaluates chip viability (Triple Captain, Wildcard, Free Hit) based on deterministic data.
+  static List<ChipRecommendation> evaluateChips({
+    required List<PlayerCandidate> currentSquad,
+    required List<PlayerCandidate> availablePool,
+    required int bankTenths,
+    required int freeTransfersAvailable,
+    required TransferMove recommendedMove,
+  }) {
+    final chips = <ChipRecommendation>[];
+
+    // 1. Triple Captain Evaluation
+    final lineup = recommendedMove.lineupResult;
+    final captain = lineup.captain;
+    final topCaptainXp = captain.xp;
+
+    if (topCaptainXp >= 9.5) {
+      chips.add(ChipRecommendation(
+        chip: FplChip.tripleCaptain,
+        title: 'Triple Captain',
+        isRecommended: true,
+        projectedGain: double.parse(topCaptainXp.toStringAsFixed(1)),
+        recommendedPlayerName: captain.webName,
+        reason: '${captain.webName} has exceptional projected points ($topCaptainXp xP) with high haul potential. Ideal gameweek to activate Triple Captain!',
+      ));
+    } else {
+      chips.add(ChipRecommendation(
+        chip: FplChip.tripleCaptain,
+        title: 'Triple Captain',
+        isRecommended: false,
+        projectedGain: 0.0,
+        recommendedPlayerName: captain.webName,
+        reason: 'Top captain projection is ${topCaptainXp.toStringAsFixed(1)} xP. Save chip for a Double Gameweek or when captain projection reaches 9.5+ xP.',
+      ));
+    }
+
+    // 2. Wildcard Evaluation
+    final lowAvailabilityCount = currentSquad.where((p) => p.pStart <= 0.25).length;
+    final multiTransferHitSavings = recommendedMove.hitCost;
+
+    if (lowAvailabilityCount >= 3 || (recommendedMove.transferCount >= 3 && multiTransferHitSavings >= 8)) {
+      chips.add(ChipRecommendation(
+        chip: FplChip.wildcard,
+        title: 'Wildcard',
+        isRecommended: true,
+        projectedGain: multiTransferHitSavings.toDouble() + (recommendedMove.transferCount * 2.5),
+        reason: 'Squad has $lowAvailabilityCount compromised players and requires multiple squad adjustments. Activating Wildcard removes all transfer hit costs (-$multiTransferHitSavings pts) and reconstructs your squad structure.',
+      ));
+    } else {
+      chips.add(const ChipRecommendation(
+        chip: FplChip.wildcard,
+        title: 'Wildcard',
+        isRecommended: false,
+        projectedGain: 0.0,
+        reason: 'Current squad structure is solid with manageable transfer requirements. Save Wildcard for upcoming fixture swings or fixture congestion.',
+      ));
+    }
+
+    // 3. Free Hit Evaluation
+    final startingLowXp = lineup.startingXi.where((p) => p.xp <= 1.5).length;
+    if (startingLowXp >= 3) {
+      chips.add(ChipRecommendation(
+        chip: FplChip.freeHit,
+        title: 'Free Hit',
+        isRecommended: true,
+        projectedGain: startingLowXp * 4.5,
+        reason: '$startingLowXp players in your starting XI have blank or high-difficulty fixtures. A Free Hit allows you to field a full high-upside XI for this gameweek without altering your long-term team.',
+      ));
+    } else {
+      chips.add(const ChipRecommendation(
+        chip: FplChip.freeHit,
+        title: 'Free Hit',
+        isRecommended: false,
+        projectedGain: 0.0,
+        reason: 'No widespread fixture blanks or emergencies detected this week. Save Free Hit for major blank or double gameweeks.',
+      ));
+    }
+
+    return chips;
   }
 
   /// Derives multi-horizon discounted score from a Horizon 1 base move in 0ms (Spec §6.1).

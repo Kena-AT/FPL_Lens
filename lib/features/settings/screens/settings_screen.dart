@@ -6,6 +6,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/confirm_sheet.dart';
 import '../../../core/widgets/disclosure_notice.dart';
+import '../../ai_providers/providers/ai_key_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -108,6 +109,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
+    final aiState = ref.watch(aiKeyProvider);
     final user = authState.user;
 
     return Scaffold(
@@ -152,13 +154,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             _buildTile(
               title: 'AI key for screenshots',
-              value: 'Not added',
+              value: aiState.isConfigured ? 'Added' : 'Not added',
               trailing: const Icon(Icons.chevron_right, color: AppTokens.textDisabled),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('AI key configuration opened.')),
-                );
-              },
+              onTap: () => context.push('/settings/ai'),
             ),
             Container(
               margin: const EdgeInsets.only(bottom: AppTokens.space4),

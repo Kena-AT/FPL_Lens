@@ -6,6 +6,26 @@ import 'package:fpl_lens/core/optimiser/lineup_optimiser.dart';
 import 'package:fpl_lens/core/optimiser/player_candidate.dart';
 import 'package:fpl_lens/core/optimiser/transfer_optimiser.dart';
 
+List<PlayerCandidate> makeStandardSquad() {
+  return [
+    const PlayerCandidate(fplId: 1, webName: 'Raya', position: 'GK', clubId: 1, priceTenths: 60, sellingPriceTenths: 60, xp: 4.8, pStart: 0.98, pSub: 0.05),
+    const PlayerCandidate(fplId: 2, webName: 'Turner', position: 'GK', clubId: 2, priceTenths: 40, sellingPriceTenths: 40, xp: 1.2, pStart: 0.05, pSub: 0.05),
+    const PlayerCandidate(fplId: 3, webName: 'Gabriel', position: 'DEF', clubId: 1, priceTenths: 60, sellingPriceTenths: 60, xp: 5.0, pStart: 0.95, pSub: 0.05),
+    const PlayerCandidate(fplId: 4, webName: 'Saliba', position: 'DEF', clubId: 1, priceTenths: 60, sellingPriceTenths: 60, xp: 4.9, pStart: 0.96, pSub: 0.05),
+    const PlayerCandidate(fplId: 5, webName: 'Alexander-Arnold', position: 'DEF', clubId: 3, priceTenths: 70, sellingPriceTenths: 70, xp: 6.2, pStart: 0.92, pSub: 0.05),
+    const PlayerCandidate(fplId: 6, webName: 'Gvardiol', position: 'DEF', clubId: 4, priceTenths: 60, sellingPriceTenths: 60, xp: 5.1, pStart: 0.88, pSub: 0.05),
+    const PlayerCandidate(fplId: 7, webName: 'Burn', position: 'DEF', clubId: 5, priceTenths: 45, sellingPriceTenths: 45, xp: 3.5, pStart: 0.90, pSub: 0.05),
+    const PlayerCandidate(fplId: 8, webName: 'Salah', position: 'MID', clubId: 3, priceTenths: 125, sellingPriceTenths: 125, xp: 8.5, pStart: 0.95, pSub: 0.05),
+    const PlayerCandidate(fplId: 9, webName: 'Saka', position: 'MID', clubId: 1, priceTenths: 100, sellingPriceTenths: 100, xp: 7.8, pStart: 0.94, pSub: 0.05),
+    const PlayerCandidate(fplId: 10, webName: 'Palmer', position: 'MID', clubId: 6, priceTenths: 105, sellingPriceTenths: 105, xp: 8.0, pStart: 0.92, pSub: 0.05),
+    const PlayerCandidate(fplId: 11, webName: 'Gordon', position: 'MID', clubId: 5, priceTenths: 75, sellingPriceTenths: 75, xp: 5.5, pStart: 0.89, pSub: 0.05),
+    const PlayerCandidate(fplId: 12, webName: 'Rogers', position: 'MID', clubId: 7, priceTenths: 50, sellingPriceTenths: 50, xp: 4.5, pStart: 0.85, pSub: 0.10),
+    const PlayerCandidate(fplId: 13, webName: 'Haaland', position: 'FWD', clubId: 4, priceTenths: 150, sellingPriceTenths: 150, xp: 9.0, pStart: 0.95, pSub: 0.05),
+    const PlayerCandidate(fplId: 14, webName: 'Watkins', position: 'FWD', clubId: 7, priceTenths: 90, sellingPriceTenths: 90, xp: 6.8, pStart: 0.90, pSub: 0.05),
+    const PlayerCandidate(fplId: 15, webName: 'Wood', position: 'FWD', clubId: 2, priceTenths: 60, sellingPriceTenths: 60, xp: 5.2, pStart: 0.82, pSub: 0.15),
+  ];
+}
+
 void main() {
   group('Architectural constraints', () {
     test('core/optimiser files must have zero Flutter or I/O imports', () {
@@ -347,6 +367,54 @@ void main() {
         );
         expect(bank, equals(0));
       });
+    });
+  
+    test('Chip Evaluation deterministic logic for Triple Captain, Wildcard, and Free Hit', () {
+      final squad = makeStandardSquad();
+      const pool = [
+        PlayerCandidate(fplId: 901, webName: 'Haaland', position: 'FWD', clubId: 1, priceTenths: 150, sellingPriceTenths: 150, xp: 11.5, pStart: 0.95, pSub: 0.05),
+        PlayerCandidate(fplId: 902, webName: 'Salah', position: 'MID', clubId: 2, priceTenths: 130, sellingPriceTenths: 130, xp: 10.0, pStart: 0.95, pSub: 0.05),
+      ];
+
+      final move = TransferOptimiser.optimizeTransfersHorizon1(
+        currentSquad: squad,
+        availablePool: pool,
+        bankTenths: 100,
+        freeTransfersAvailable: 1,
+      );
+
+      final chips = TransferOptimiser.evaluateChips(
+        currentSquad: squad,
+        availablePool: pool,
+        bankTenths: 100,
+        freeTransfersAvailable: 1,
+        recommendedMove: move,
+      );
+
+      expect(chips.length, 3);
+      final tc = chips.firstWhere((c) => c.chip == FplChip.tripleCaptain);
+      final wc = chips.firstWhere((c) => c.chip == FplChip.wildcard);
+      final fh = chips.firstWhere((c) => c.chip == FplChip.freeHit);
+
+      expect(tc.title, 'Triple Captain');
+      expect(wc.title, 'Wildcard');
+      expect(fh.title, 'Free Hit');
+    });
+
+    test('TransferStrategy options constraint enforcement', () {
+      final squad = makeStandardSquad();
+      const pool = [
+        PlayerCandidate(fplId: 901, webName: 'Haaland', position: 'FWD', clubId: 1, priceTenths: 150, sellingPriceTenths: 150, xp: 11.5, pStart: 0.95, pSub: 0.05),
+      ];
+
+      final singleMove = TransferOptimiser.optimizeTransfersHorizon1(
+        currentSquad: squad,
+        availablePool: pool,
+        bankTenths: 100,
+        freeTransfersAvailable: 1,
+        strategy: TransferStrategy.singleOnly,
+      );
+      expect(singleMove.transferCount, lessThanOrEqualTo(1));
     });
   });
 }

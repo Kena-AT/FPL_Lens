@@ -95,7 +95,7 @@ void main() {
       when(() => mockFplRepo.getSquad(12345, gw: 7)).thenAnswer((_) async => dummySquad);
       when(() => mockFplRepo.getTransfers(12345)).thenAnswer((_) async => dummyTransfers);
       when(() => mockFplRepo.getHistory(12345)).thenAnswer((_) async => dummyHistory);
-      when(() => mockFplRepo.searchPlayers('', limit: 50)).thenAnswer((_) async => [
+      when(() => mockFplRepo.searchPlayers('', limit: any(named: 'limit'))).thenAnswer((_) async => [
             {
               'fpl_id': 101,
               'web_name': 'Raya',
@@ -181,7 +181,7 @@ void main() {
       when(() => mockFplRepo.getSquad(12345, gw: 7)).thenAnswer((_) async => dummySquad);
       when(() => mockFplRepo.getTransfers(12345)).thenAnswer((_) async => dummyTransfers);
       when(() => mockFplRepo.getHistory(12345)).thenThrow(Exception('History timeout'));
-      when(() => mockFplRepo.searchPlayers('', limit: 50)).thenAnswer((_) async => []);
+      when(() => mockFplRepo.searchPlayers('', limit: any(named: 'limit'))).thenAnswer((_) async => []);
       when(() => mockFplRepo.derivePlayerPrice(
             playerFplId: any(named: 'playerFplId'),
             nowCostTenths: any(named: 'nowCostTenths'),
@@ -214,7 +214,7 @@ void main() {
       when(() => mockFplRepo.getSquad(12345, gw: 7)).thenAnswer((_) async => dummySquad);
       when(() => mockFplRepo.getTransfers(12345)).thenAnswer((_) async => []);
       when(() => mockFplRepo.getHistory(12345)).thenAnswer((_) async => dummyHistory);
-      when(() => mockFplRepo.searchPlayers('', limit: 50)).thenAnswer((_) async => [
+      when(() => mockFplRepo.searchPlayers('', limit: any(named: 'limit'))).thenAnswer((_) async => [
             {
               'fpl_id': 202,
               'web_name': 'Haaland',
@@ -261,7 +261,7 @@ void main() {
       when(() => mockFplRepo.getSquad(12345, gw: 7)).thenAnswer((_) async => dummySquad);
       when(() => mockFplRepo.getTransfers(12345)).thenAnswer((_) async => dummyTransfers);
       when(() => mockFplRepo.getHistory(12345)).thenAnswer((_) async => dummyHistory);
-      when(() => mockFplRepo.searchPlayers('', limit: 50)).thenAnswer((_) async => []);
+      when(() => mockFplRepo.searchPlayers('', limit: any(named: 'limit'))).thenAnswer((_) async => []);
       when(() => mockFplRepo.derivePlayerPrice(
             playerFplId: any(named: 'playerFplId'),
             nowCostTenths: any(named: 'nowCostTenths'),

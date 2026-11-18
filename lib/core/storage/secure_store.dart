@@ -10,6 +10,10 @@ class SecureStore {
   static const String _keyUserId = 'fpl_user_id';
   static const String _keyFplTeamId = 'fpl_team_id';
 
+  static const String _keyAiProvider = 'fpl_ai_provider';
+  static const String _keyAiKey = 'fpl_ai_key';
+  static const String _keyAiValidatedAt = 'fpl_ai_validated_at';
+
   SecureStore({FlutterSecureStorage? storage})
       : _storage = storage ??
             const FlutterSecureStorage(
@@ -44,6 +48,56 @@ class SecureStore {
     final val = await _storage.read(key: _keyFplTeamId);
     if (val == null) return null;
     return int.tryParse(val);
+  }
+
+  // --- AI Key Storage (Sprint 11) ---
+
+  Future<void> saveAiKey({
+    required String providerId,
+    required String key,
+    DateTime? validatedAt,
+  }) async {
+    await _storage.write(key: _keyAiProvider, value: providerId);
+    await _storage.write(key: _keyAiKey, value: key.trim());
+    if (validatedAt != null) {
+      await _storage.write(
+        key: _keyAiValidatedAt,
+        value: validatedAt.toIso8601String(),
+      );
+    }
+  }
+
+  Future<String?> getAiProvider() async {
+    return await _storage.read(key: _keyAiProvider);
+  }
+
+  Future<String?> getAiKey() async {
+    return await _storage.read(key: _keyAiKey);
+  }
+
+  Future<DateTime?> getAiValidatedAt() async {
+    final val = await _storage.read(key: _keyAiValidatedAt);
+    if (val == null) return null;
+    return DateTime.tryParse(val);
+  }
+
+  Future<String?> getMaskedAiKey() async {
+    final key = await getAiKey();
+    if (key == null || key.isEmpty) return null;
+    if (key.length <= 4) return '••••';
+    final last4 = key.substring(key.length - 4);
+    return '••••••••$last4';
+  }
+
+  Future<void> deleteAiKey() async {
+    await _storage.delete(key: _keyAiProvider);
+    await _storage.delete(key: _keyAiKey);
+    await _storage.delete(key: _keyAiValidatedAt);
+  }
+
+  Future<bool> hasAiKey() async {
+    final key = await _storage.read(key: _keyAiKey);
+    return key != null && key.isNotEmpty;
   }
 
   Future<void> clearAll() async {

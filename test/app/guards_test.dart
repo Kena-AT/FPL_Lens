@@ -20,6 +20,7 @@ void main() {
           GoRoute(path: '/auth/register', builder: (_, __) => const Text('Screen: Register')),
           GoRoute(path: '/auth/verify', builder: (_, __) => const Text('Screen: Verify')),
           GoRoute(path: '/onboarding/team', builder: (_, __) => const Text('Screen: TeamCheck')),
+          GoRoute(path: '/onboarding/load', builder: (_, __) => const Text('Screen: LoadSquad')),
           GoRoute(path: '/home', builder: (_, __) => const Text('Screen: Home')),
         ],
       );
@@ -104,6 +105,27 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Screen: TeamCheck'), findsOneWidget);
+    });
+
+    testWidgets('Authenticated verified user with squad is redirected to /onboarding/load from /auth', (tester) async {
+      await tester.pumpWidget(
+        buildRouterApp(
+          authState: const AuthState(
+            status: AuthStatus.authenticatedVerified,
+            user: UserModel(
+              id: 'user-1',
+              email: 'test@example.com',
+              displayName: 'Test',
+              status: 'active',
+              fplTeamId: 123456,
+            ),
+          ),
+          initialLocation: '/auth',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Screen: LoadSquad'), findsOneWidget);
     });
 
     testWidgets('Authenticated verified user with squad reaches /home', (tester) async {

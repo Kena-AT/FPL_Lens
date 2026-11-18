@@ -18,6 +18,7 @@ from fpl_lens.api.routes.health import router as health_router
 from fpl_lens.api.routes.internal_jobs import router as internal_jobs_router
 from fpl_lens.api.routes.me import router as me_router
 from fpl_lens.api.routes.projections import router as projections_router
+from fpl_lens.api.routes.squads import router as squads_router
 from fpl_lens.config import settings
 
 
@@ -60,6 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(devices_router, prefix="/api/v1")
     app.include_router(fpl_proxy_router, prefix="/api/v1")
     app.include_router(projections_router, prefix="/api/v1")
+    app.include_router(squads_router, prefix="/api/v1")
     app.include_router(internal_jobs_router)
     app.include_router(internal_jobs_router, prefix="/api/v1")
 

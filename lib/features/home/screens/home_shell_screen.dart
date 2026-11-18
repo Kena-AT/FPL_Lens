@@ -25,7 +25,10 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
     super.initState();
     _currentIndex = widget.initialIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(squadNotifierProvider.notifier).refreshSquad();
+      final squadState = ref.read(squadNotifierProvider);
+      if (!squadState.isLoading && squadState.lastSyncTime == null) {
+        ref.read(squadNotifierProvider.notifier).refreshSquad();
+      }
     });
   }
 

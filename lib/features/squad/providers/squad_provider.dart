@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/error_mapper.dart';
@@ -124,8 +125,8 @@ class SquadNotifier extends StateNotifier<SquadState> {
     super.dispose();
   }
 
-  Future<void> _init() async {
-    // Watch squad players stream from Drift
+  void _init() {
+    // 1. Watch squad players stream from Drift immediately
     _squadSub = _db.watchSquadPlayers().listen((players) async {
       if (!mounted) return;
       final unconfirmed = await _db.getUnconfirmedPricesCount();
@@ -135,14 +136,84 @@ class SquadNotifier extends StateNotifier<SquadState> {
       final gwHistory = await _db.getGameweekHistory();
       if (!mounted) return;
 
+      // Never prematurely mark as completed while a loading sequence is active
+      final newStep = state.isLoading
+          ? state.step
+          : (players.isNotEmpty ? SquadLoadingStep.completed : state.step);
+
       state = state.copyWith(
         squad: players,
         unconfirmedCount: unconfirmed,
         transfers: transfers,
         gameweekHistory: gwHistory,
-        step: players.isNotEmpty ? SquadLoadingStep.completed : state.step,
+        step: newStep,
       );
+
+      // Auto-repair any stale 'Player {fplId}' names in Drift
+      if (players.any((p) => p.webName.startsWith('Player '))) {
+        _repairPlayerNames(players);
+      }
     });
+
+    // 2. Hydrate cached metadata from DB preferences in background
+    _hydratePreferences();
+  }
+
+  Future<void> _repairPlayerNames(List<SquadPlayersTableData> players) async {
+    final needsRepair = players.where((p) => p.webName.startsWith('Player ')).toList();
+    if (needsRepair.isEmpty) return;
+
+    try {
+      final search = await _fplRepo.searchPlayers('', limit: 1000);
+      final map = {for (final p in search) (p['fpl_id'] as int): p};
+      for (final player in needsRepair) {
+        final realName = map[player.fplId]?['web_name'] as String?;
+        if (realName != null && !realName.startsWith('Player ')) {
+          await (_db.update(_db.squadPlayersTable)
+                ..where((tbl) => tbl.fplId.equals(player.fplId)))
+              .write(SquadPlayersTableCompanion(webName: drift.Value(realName)));
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _hydratePreferences() async {
+    try {
+      final bankStr = await _db.getPreference('squad_bank_tenths');
+      if (!mounted) return;
+      final valStr = await _db.getPreference('squad_value_tenths');
+      if (!mounted) return;
+      final ftStr = await _db.getPreference('squad_free_transfers');
+      if (!mounted) return;
+      final curGwJson = await _db.getPreference('current_gw_json');
+      if (!mounted) return;
+      final nextGwJson = await _db.getPreference('next_gw_json');
+      if (!mounted) return;
+      final syncStr = await _db.getPreference('last_sync_time');
+      if (!mounted) return;
+
+      GameweekMetadata? curGw;
+      GameweekMetadata? nextGw;
+      if (curGwJson != null && curGwJson.isNotEmpty) {
+        try {
+          curGw = GameweekMetadata.fromJson(jsonDecode(curGwJson) as Map<String, dynamic>);
+        } catch (_) {}
+      }
+      if (nextGwJson != null && nextGwJson.isNotEmpty) {
+        try {
+          nextGw = GameweekMetadata.fromJson(jsonDecode(nextGwJson) as Map<String, dynamic>);
+        } catch (_) {}
+      }
+
+      state = state.copyWith(
+        bankTenths: bankStr != null ? int.tryParse(bankStr) : null,
+        squadValueTenths: valStr != null ? int.tryParse(valStr) : null,
+        freeTransfers: ftStr != null ? int.tryParse(ftStr) : null,
+        currentGameweek: curGw,
+        nextGameweek: nextGw,
+        lastSyncTime: syncStr != null ? DateTime.tryParse(syncStr) : null,
+      );
+    } catch (_) {}
   }
 
   /// 4-step sequence per Frontend Plan P6:
@@ -192,8 +263,8 @@ class SquadNotifier extends StateNotifier<SquadState> {
       // Also fetch transfers for price derivation
       rawTransfers = await _fplRepo.getTransfers(teamId);
 
-      // Search players to get names and positions if available
-      final playersSearch = await _fplRepo.searchPlayers('', limit: 50);
+      // Search all players to get names and positions (limit 1000 covers full Premier League)
+      final playersSearch = await _fplRepo.searchPlayers('', limit: 1000);
       final playerInfoMap = {
         for (final p in playersSearch) (p['fpl_id'] as int): p,
       };
@@ -210,7 +281,9 @@ class SquadNotifier extends StateNotifier<SquadState> {
         final pick = squadResp.picks[i];
         final info = playerInfoMap[pick.element];
 
-        final webName = pick.webName ?? (info?['web_name'] as String?) ?? 'Player ${pick.element}';
+        final webName = (pick.webName != null && !pick.webName!.startsWith('Player '))
+            ? pick.webName!
+            : ((info?['web_name'] as String?) ?? 'Player #${pick.element}');
         final position = pick.playerPosition ?? (info?['position'] as String?) ?? _defaultPosition(pick.position);
         final teamShortName = pick.teamShortName ?? (info?['team_short_name'] as String?) ?? 'PL';
         final nowCost = pick.nowCost ?? (info?['now_cost'] as int?) ?? 60;
@@ -262,6 +335,18 @@ class SquadNotifier extends StateNotifier<SquadState> {
       final bank = (squadResp.entryHistory?['bank'] as int?) ?? 0;
       final value = (squadResp.entryHistory?['value'] as int?) ?? 1000;
 
+      // Persist squad summary & deadlines for instant 0ms restoration
+      try {
+        await _db.setPreference('squad_bank_tenths', bank.toString());
+        await _db.setPreference('squad_value_tenths', value.toString());
+        if (currentGwResp.current != null) {
+          await _db.setPreference('current_gw_json', jsonEncode(currentGwResp.current!.toJson()));
+        }
+        if (currentGwResp.next != null) {
+          await _db.setPreference('next_gw_json', jsonEncode(currentGwResp.next!.toJson()));
+        }
+      } catch (_) {}
+
       state = state.copyWith(
         currentGameweek: currentGwResp.current,
         nextGameweek: currentGwResp.next,
@@ -300,10 +385,14 @@ class SquadNotifier extends StateNotifier<SquadState> {
       state = state.copyWith(step: SquadLoadingStep.step4History);
     } catch (e) {
       // History/transfer failure after squad step: load completes with partial warning per P6
+      final now = DateTime.now();
+      try {
+        await _db.setPreference('last_sync_time', now.toIso8601String());
+      } catch (_) {}
       state = state.copyWith(
         isPartialFailure: true,
         step: SquadLoadingStep.completed,
-        lastSyncTime: DateTime.now(),
+        lastSyncTime: now,
       );
       return;
     }
@@ -329,16 +418,25 @@ class SquadNotifier extends StateNotifier<SquadState> {
       await _db.replaceGameweekHistory(gwCompanions);
       await _secureStore.saveFplTeamId(teamId);
 
+      final now = DateTime.now();
+      try {
+        await _db.setPreference('last_sync_time', now.toIso8601String());
+      } catch (_) {}
+
       state = state.copyWith(
         step: SquadLoadingStep.completed,
-        lastSyncTime: DateTime.now(),
+        lastSyncTime: now,
       );
     } catch (e) {
       // History failure after squad step: load completes with partial warning per P6
+      final now = DateTime.now();
+      try {
+        await _db.setPreference('last_sync_time', now.toIso8601String());
+      } catch (_) {}
       state = state.copyWith(
         isPartialFailure: true,
         step: SquadLoadingStep.completed,
-        lastSyncTime: DateTime.now(),
+        lastSyncTime: now,
       );
     }
   }
@@ -429,6 +527,24 @@ class SquadNotifier extends StateNotifier<SquadState> {
     }).toList();
 
     await _db.replaceSquad(updatedList);
+  }
+
+  /// Saves squad players resolved via OCR screenshot scanning per Sprint 11.
+  /// Purchase prices are marked as 'CONFIRM' per Spec.
+  Future<void> saveScanResolvedSquad(List<SquadPlayersTableCompanion> companions) async {
+    await _db.replaceSquad(companions);
+    for (final p in companions) {
+      await _db.upsertPurchasePrice(
+        playerFplId: p.fplId.value,
+        purchasePriceTenths: p.purchasePriceTenths.value,
+        source: 'CONFIRM',
+        isConfirmed: false,
+      );
+    }
+    state = state.copyWith(
+      step: SquadLoadingStep.completed,
+      lastSyncTime: DateTime.now(),
+    );
   }
 
   static String _defaultPosition(int positionOrder) {
