@@ -2,6 +2,8 @@
 Docs/
 Docs/Sprints.md
 scratch/
+backups/
+*.enc
 
 # Secrets and environment configurations
 .env

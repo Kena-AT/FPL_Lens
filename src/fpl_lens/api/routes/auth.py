@@ -17,6 +17,7 @@ from fpl_lens.api.schemas.auth import (
     TokenResponse,
     VerifyEmailRequest,
 )
+from fpl_lens.config import settings
 from fpl_lens.db.models import AuthIdentity, EmailCode, User
 from fpl_lens.db.session import get_db
 from fpl_lens.logging import logger
@@ -30,6 +31,7 @@ from fpl_lens.services.mailer import (
     send_verification_email,
 )
 from fpl_lens.services.pwned import is_password_breached
+from fpl_lens.services.rate_limiter import rate_limiter
 from fpl_lens.services.token import (
     create_access_token,
     create_and_store_email_code,
@@ -56,6 +58,14 @@ async def register(
     """
     response.headers["Cache-Control"] = "no-store"
     client_ip = get_client_ip(request)
+
+    # Rate limiting: Registration per IP (Backend Design §12.4: 10 / hour)
+    rate_limiter.check(
+        scope="registration_ip",
+        identifier=client_ip,
+        max_requests=settings.RATE_LIMIT_REGISTRATION_IP_REQUESTS,
+        window_seconds=settings.RATE_LIMIT_REGISTRATION_IP_WINDOW_SECONDS,
+    )
 
     # 1. Breached password check
     if await is_password_breached(payload.password):
@@ -318,6 +328,14 @@ async def login(
     """
     response.headers["Cache-Control"] = "no-store"
     client_ip = get_client_ip(request)
+
+    # Rate limiting: Login per IP (Backend Design §12.4: 100 requests / 15 min)
+    rate_limiter.check(
+        scope="login_ip",
+        identifier=client_ip,
+        max_requests=settings.RATE_LIMIT_LOGIN_IP_REQUESTS,
+        window_seconds=settings.RATE_LIMIT_LOGIN_IP_WINDOW_SECONDS,
+    )
 
     stmt = select(User).where(User.email == payload.email)
     user = db.execute(stmt).scalar_one_or_none()
@@ -621,6 +639,37 @@ async def forgot_password(
     user = db.execute(stmt).scalar_one_or_none()
 
     if user and user.status != "pending_deletion":
+        now = datetime.now(UTC)
+        one_min_ago = now - timedelta(seconds=60)
+        one_hour_ago = now - timedelta(seconds=3600)
+
+        # 1 per minute per account
+        recent_stmt = select(EmailCode).where(
+            EmailCode.user_id == user.id,
+            EmailCode.purpose == "reset_password",
+            EmailCode.created_at >= one_min_ago,
+        )
+        if db.execute(recent_stmt).first():
+            raise AppError(
+                code="RATE_LIMITED",
+                message="Please wait at least 1 minute before requesting a new reset code",
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        # 5 per hour per account
+        count_stmt = select(func.count(EmailCode.id)).where(
+            EmailCode.user_id == user.id,
+            EmailCode.purpose == "reset_password",
+            EmailCode.created_at >= one_hour_ago,
+        )
+        count = db.execute(count_stmt).scalar() or 0
+        if count >= settings.RATE_LIMIT_VERIFY_CODE_PER_HOUR:
+            raise AppError(
+                code="RATE_LIMITED",
+                message="Too many password reset requests. Please wait an hour before requesting again.",
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
         code = create_and_store_email_code(db, user.id, "reset_password", expiry_minutes=30)
         await send_password_reset_email(user.email, code, expiry_minutes=30)
 

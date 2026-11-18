@@ -6,6 +6,7 @@ import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/sign_in_screen.dart';
 import '../features/auth/screens/splash_screen.dart';
 import '../features/auth/screens/verify_email_screen.dart';
+import '../features/gameweek/screens/gameweek_screen.dart';
 import '../features/history/screens/history_screen.dart';
 import '../features/home/screens/home_shell_screen.dart';
 import '../features/onboarding/screens/load_squad_screen.dart';
@@ -127,6 +128,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/heatmap',
         name: 'heatmap',
         builder: (context, state) => const HeatmapScreen(),
+      ),
+      GoRoute(
+        path: '/gameweek',
+        name: 'gameweek',
+        builder: (context, state) => const GameweekScreen(),
       ),
       GoRoute(
         path: '/scan',

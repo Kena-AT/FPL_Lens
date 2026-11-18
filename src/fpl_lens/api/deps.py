@@ -6,8 +6,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fpl_lens.api.errors import AppError
+from fpl_lens.config import settings
 from fpl_lens.db.models import User
 from fpl_lens.db.session import get_db
+from fpl_lens.services.rate_limiter import rate_limiter
 from fpl_lens.services.token import decode_access_token
 
 
@@ -91,6 +93,14 @@ def get_current_user(
             message="Account has been deleted",
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
+
+    # General rate limit per user (Backend Design §12.4: 300 / minute)
+    rate_limiter.check(
+        scope="general_user",
+        identifier=str(user.id),
+        max_requests=settings.RATE_LIMIT_GENERAL_USER_REQUESTS,
+        window_seconds=settings.RATE_LIMIT_GENERAL_USER_WINDOW_SECONDS,
+    )
 
     return user
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/tokens.dart';
+
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/confirm_sheet.dart';
 import '../../../core/widgets/disclosure_notice.dart';
@@ -18,6 +20,17 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _shareAnalytics = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final analyticsService = ref.read(analyticsServiceProvider);
+      setState(() {
+        _shareAnalytics = analyticsService.isEnabled;
+      });
+    });
+  }
 
   String _maskEmail(String? email) {
     if (email == null || email.isEmpty) return 'None';
@@ -60,6 +73,128 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await ref.read(authNotifierProvider.notifier).deleteAccount();
       if (mounted) context.go('/auth');
     }
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTokens.bgSurface,
+        title: const Text('About FPL Lens', style: AppTextStyles.title),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Version: 0.1.0\nBuild: 1\nCommit: 3827681',
+                style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
+              ),
+              const SizedBox(height: AppTokens.space16),
+              Text(
+                'Data Attribution:',
+                style: AppTextStyles.label.copyWith(color: AppTokens.goldPrimary),
+              ),
+              const SizedBox(height: AppTokens.space4),
+              Text(
+                'Data sourced from public Fantasy Premier League endpoints.',
+                style: AppTextStyles.body.copyWith(fontSize: 13.0),
+              ),
+              const SizedBox(height: AppTokens.space16),
+              Text(
+                'Disclaimer:',
+                style: AppTextStyles.label.copyWith(color: AppTokens.goldPrimary),
+              ),
+              const SizedBox(height: AppTokens.space4),
+              Text(
+                'FPL Lens is an independent analytics tool. It is not affiliated with, endorsed by, or sponsored by the Football Association Premier League Limited or Fantasy Premier League.',
+                style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              showLicensePage(
+                context: context,
+                applicationName: 'FPL Lens',
+                applicationVersion: '0.1.0 (Build 1)',
+              );
+            },
+            child: const Text('Licences', style: TextStyle(color: AppTokens.goldPrimary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close', style: TextStyle(color: AppTokens.textPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyNoteDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTokens.bgSurface,
+        title: const Text('Privacy & Security Note', style: AppTextStyles.title),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Client-Side AI Key Storage:',
+                style: AppTextStyles.label.copyWith(color: AppTokens.goldPrimary),
+              ),
+              const SizedBox(height: AppTokens.space4),
+              Text(
+                'Your AI vision keys (Gemini, Claude, OpenAI) are encrypted and stored exclusively on your device using Android KeyStore. They are never sent to or stored on FPL Lens servers.',
+                style: AppTextStyles.body.copyWith(fontSize: 13.0),
+              ),
+              const SizedBox(height: AppTokens.space12),
+              Text(
+                'Zero Screenshot Upload:',
+                style: AppTextStyles.label.copyWith(color: AppTokens.goldPrimary),
+              ),
+              const SizedBox(height: AppTokens.space4),
+              Text(
+                'Squad screenshots are processed directly on your device and sent solely to your chosen AI provider using your own key. Screenshots are never transmitted to or stored on FPL Lens servers.',
+                style: AppTextStyles.body.copyWith(fontSize: 13.0),
+              ),
+              const SizedBox(height: AppTokens.space12),
+              Text(
+                'Server Caching & Public Data:',
+                style: AppTextStyles.label.copyWith(color: AppTokens.goldPrimary),
+              ),
+              const SizedBox(height: AppTokens.space4),
+              Text(
+                'Public Premier League reference data and mathematical projection bundles are cached on our servers to ensure deterministic projections.',
+                style: AppTextStyles.body.copyWith(fontSize: 13.0),
+              ),
+              const SizedBox(height: AppTokens.space12),
+              Text(
+                'Notification Tokens:',
+                style: AppTextStyles.label.copyWith(color: AppTokens.goldPrimary),
+              ),
+              const SizedBox(height: AppTokens.space4),
+              Text(
+                'Push tokens (FCM) are used solely to deliver deadline reminders and injury status alerts according to your preferences.',
+                style: AppTextStyles.body.copyWith(fontSize: 13.0),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Got it', style: TextStyle(color: AppTokens.goldPrimary)),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildGroupHeader(String title) {
@@ -179,13 +314,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   value: _shareAnalytics,
                   activeThumbColor: AppTokens.goldPrimary,
-                  onChanged: (val) => setState(() => _shareAnalytics = val),
+                  onChanged: (val) async {
+                    setState(() => _shareAnalytics = val);
+                    await ref.read(analyticsServiceProvider).setEnabled(val);
+                  },
                 ),
               ),
             ),
 
             // 3. Privacy and Data Group
             _buildGroupHeader('Privacy and Data'),
+            _buildTile(
+              title: 'Privacy note',
+              value: 'Local key storage, zero screenshot upload, server caching',
+              trailing: const Icon(Icons.chevron_right, color: AppTokens.textDisabled),
+              onTap: () => _showPrivacyNoteDialog(context),
+            ),
             _buildTile(
               title: 'What data we store',
               value: 'Account email, FPL team ID, public reference data, and cache.',
@@ -206,8 +350,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             // 4. About Group
             _buildGroupHeader('About'),
             _buildTile(
-              title: 'Version',
-              value: '0.1.0 (Build 1)',
+              title: 'About FPL Lens',
+              value: 'Version 0.1.0, data attribution, and disclaimer',
+              trailing: const Icon(Icons.chevron_right, color: AppTokens.textDisabled),
+              onTap: () => _showAboutDialog(context),
             ),
             const SizedBox(height: AppTokens.space8),
             const DisclosureNotice(),
