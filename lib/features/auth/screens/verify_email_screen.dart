@@ -165,33 +165,33 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 hasError: _hasError,
                 onCompleted: _handleCodeCompleted,
               ),
-              const SizedBox(height: AppTokens.space24),
+              const SizedBox(height: AppTokens.space16),
 
-              // Expiry Countdown
-              Center(
-                child: Text(
-                  isExpired
-                      ? 'This code has expired.'
-                      : 'The code expires in ${_formatTime(_expirySeconds)}.',
-                  style: AppTextStyles.caption.copyWith(
-                    color: isExpired ? AppTokens.statusOut : AppTokens.textDisabled,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppTokens.space24),
-
-              if (authState.errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppTokens.space12),
-                  decoration: BoxDecoration(
-                    color: AppTokens.statusOut.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(AppTokens.radiusInput),
-                    border: Border.all(color: AppTokens.statusOut),
-                  ),
-                  child: Text(
-                    authState.errorMessage!,
-                    style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
-                    textAlign: TextAlign.center,
+              // Inline error directly under CodeInput (wrong code / expired / rate limited)
+              if (_hasError || authState.errorMessage != null) ...[
+                Semantics(
+                  liveRegion: true,
+                  child: Container(
+                    padding: const EdgeInsets.all(AppTokens.space12),
+                    decoration: BoxDecoration(
+                      color: AppTokens.statusOut.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(AppTokens.radiusInput),
+                      border: Border.all(color: AppTokens.statusOut),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 16.0, color: AppTokens.statusOut),
+                        const SizedBox(width: AppTokens.space8),
+                        Flexible(
+                          child: Text(
+                            authState.errorMessage ?? "That code doesn't match. Please try again.",
+                            style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppTokens.space16),
@@ -205,6 +205,19 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 variant: AppButtonVariant.secondary,
                 size: AppButtonSize.large,
                 onPressed: _cooldownSeconds == 0 && !isLoading ? _handleResend : null,
+              ),
+              const SizedBox(height: AppTokens.space24),
+
+              // Expiry Notice at the bottom
+              Center(
+                child: Text(
+                  isExpired
+                      ? 'This code has expired.'
+                      : 'The code expires in ${_formatTime(_expirySeconds)}.',
+                  style: AppTextStyles.caption.copyWith(
+                    color: isExpired ? AppTokens.statusOut : AppTokens.textDisabled,
+                  ),
+                ),
               ),
               const SizedBox(height: AppTokens.space16),
             ],

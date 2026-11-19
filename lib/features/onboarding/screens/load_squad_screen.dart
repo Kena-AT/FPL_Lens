@@ -147,15 +147,24 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
               const Spacer(),
 
               if (squadState.step == SquadLoadingStep.failed) ...[
-                ErrorState(
-                  error: squadState.error ??
-                      const AppError(
-                        kind: AppErrorKind.unknown,
-                        message: 'Could not load your squad from FPL.',
-                        retryable: true,
-                      ),
-                  onRetry: () {
-                    ref.read(squadNotifierProvider.notifier).retryFailedStep(widget.teamId);
+                Builder(
+                  builder: (context) {
+                    final err = squadState.error ??
+                        const AppError(
+                          kind: AppErrorKind.unknown,
+                          message: 'Could not load your squad from FPL.',
+                          retryable: true,
+                        );
+                    final canUseScreenshot = err.kind == AppErrorKind.fplUnavailable ||
+                        err.kind == AppErrorKind.timeout;
+                    return ErrorState(
+                      error: err,
+                      onRetry: () {
+                        ref.read(squadNotifierProvider.notifier).retryFailedStep(widget.teamId);
+                      },
+                      customActionLabel: canUseScreenshot ? 'Use screenshot instead' : null,
+                      onCustomAction: canUseScreenshot ? () => context.push('/scan') : null,
+                    );
                   },
                 ),
                 const SizedBox(height: AppTokens.space16),

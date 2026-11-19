@@ -82,6 +82,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       lockoutText = "Too many attempts. Try again in $minutes minutes.";
     }
 
+    // Distinguish top-level banner (account deletion / session expired)
+    // from inline error under the form (wrong credentials / lockout / offline).
+    final isTopBanner = authState.errorMessage != null &&
+        (authState.errorMessage!.contains('scheduled for deletion') ||
+            authState.errorMessage!.contains('Please sign in again'));
+
+    final topBannerText = isTopBanner ? authState.errorMessage : null;
+    final inlineError = lockoutText ?? (!isTopBanner ? authState.errorMessage : null);
+
     return Scaffold(
       backgroundColor: AppTokens.bgBase,
       body: SafeArea(
@@ -111,7 +120,34 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(height: AppTokens.space32),
+                      const SizedBox(height: AppTokens.space24),
+
+                      // Top-level banner (e.g. account scheduled for deletion or session expired)
+                      if (topBannerText != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(AppTokens.space12),
+                          decoration: BoxDecoration(
+                            color: AppTokens.statusDoubtful.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(AppTokens.radiusInput),
+                            border: Border.all(color: AppTokens.statusDoubtful),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, color: AppTokens.statusDoubtful, size: 20),
+                              const SizedBox(width: AppTokens.space8),
+                              Expanded(
+                                child: Text(
+                                  topBannerText,
+                                  style: AppTextStyles.caption.copyWith(color: AppTokens.textPrimary),
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppTokens.space16),
+                      ],
+                      const SizedBox(height: AppTokens.space8),
 
                       // 2. Form Fields
                       AppTextField(
@@ -147,39 +183,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           ),
                         ),
                       ),
-
-                      // Error or Lockout Banner
-                      if (lockoutText != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(AppTokens.space12),
-                          decoration: BoxDecoration(
-                            color: AppTokens.statusOut.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(AppTokens.radiusInput),
-                            border: Border.all(color: AppTokens.statusOut),
-                          ),
-                          child: Text(
-                            lockoutText,
-                            style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const SizedBox(height: AppTokens.space16),
-                      ] else if (authState.errorMessage != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(AppTokens.space12),
-                          decoration: BoxDecoration(
-                            color: AppTokens.statusOut.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(AppTokens.radiusInput),
-                            border: Border.all(color: AppTokens.statusOut),
-                          ),
-                          child: Text(
-                            authState.errorMessage!,
-                            style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const SizedBox(height: AppTokens.space16),
-                      ],
+                      const SizedBox(height: AppTokens.space8),
 
                       // 4. Sign in primary button
                       AppButton(
@@ -187,6 +191,36 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         onPressed: isFormValid ? _handleSignIn : null,
                         isLoading: isLoading,
                       ),
+                      const SizedBox(height: AppTokens.space12),
+
+                      // Inline error under the form (not per field) for wrong credentials / lockout / offline
+                      if (inlineError != null) ...[
+                        Semantics(
+                          liveRegion: true,
+                          child: Container(
+                            padding: const EdgeInsets.all(AppTokens.space12),
+                            decoration: BoxDecoration(
+                              color: AppTokens.statusOut.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(AppTokens.radiusInput),
+                              border: Border.all(color: AppTokens.statusOut),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline, size: 16.0, color: AppTokens.statusOut),
+                                const SizedBox(width: AppTokens.space8),
+                                Expanded(
+                                  child: Text(
+                                    inlineError,
+                                    style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppTokens.space12),
+                      ],
                       const SizedBox(height: AppTokens.space16),
 
                       // 5. Divider with "or"

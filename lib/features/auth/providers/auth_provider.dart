@@ -149,8 +149,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
           errorMessage: "Too many attempts. Try again in 15 minutes.",
           lockoutSeconds: 15 * 60,
         );
+      } else if (e.kind == AppErrorKind.offline) {
+        state = const AuthState(
+          status: AuthStatus.unauthenticated,
+          errorMessage: "You're offline. Connect to sign in.",
+        );
       } else {
-        state = AuthState(
+        state = const AuthState(
           status: AuthStatus.unauthenticated,
           errorMessage: "Email or password is incorrect.",
         );
