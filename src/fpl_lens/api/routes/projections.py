@@ -258,6 +258,7 @@ def get_fixtures(
         query = query.filter(Fixture.gameweek == gw)
 
     fixtures = query.order_by(Fixture.kickoff_time.asc().nulls_last()).all()
+    teams_map = {t.fpl_id: t for t in db.query(Team).all()}
 
     payload = [
         {
@@ -265,7 +266,27 @@ def get_fixtures(
             "gameweek": f.gameweek,
             "kickoff_time": f.kickoff_time.isoformat() if f.kickoff_time else None,
             "home_team_fpl_id": f.home_team_fpl_id,
+            "home_team_short_name": (
+                teams_map[f.home_team_fpl_id].short_name
+                if f.home_team_fpl_id in teams_map
+                else f"T{f.home_team_fpl_id}"
+            ),
+            "home_team_name": (
+                teams_map[f.home_team_fpl_id].name
+                if f.home_team_fpl_id in teams_map
+                else ""
+            ),
             "away_team_fpl_id": f.away_team_fpl_id,
+            "away_team_short_name": (
+                teams_map[f.away_team_fpl_id].short_name
+                if f.away_team_fpl_id in teams_map
+                else f"T{f.away_team_fpl_id}"
+            ),
+            "away_team_name": (
+                teams_map[f.away_team_fpl_id].name
+                if f.away_team_fpl_id in teams_map
+                else ""
+            ),
             "finished": f.finished,
             "home_score": f.home_score,
             "away_score": f.away_score,

@@ -338,3 +338,110 @@ class CurrentGameweekResponse {
         'next': next?.toJson(),
       };
 }
+
+class FixtureModel {
+  final int fplId;
+  final int? gameweek;
+  final DateTime? kickoffTime;
+  final int homeTeamFplId;
+  final String homeTeamShortName;
+  final String homeTeamName;
+  final int awayTeamFplId;
+  final String awayTeamShortName;
+  final String awayTeamName;
+  final bool finished;
+  final int? homeScore;
+  final int? awayScore;
+  final bool isDouble;
+  final bool isBlank;
+  final String? statusLabel;
+
+  const FixtureModel({
+    required this.fplId,
+    this.gameweek,
+    this.kickoffTime,
+    required this.homeTeamFplId,
+    required this.homeTeamShortName,
+    this.homeTeamName = '',
+    required this.awayTeamFplId,
+    required this.awayTeamShortName,
+    this.awayTeamName = '',
+    this.finished = false,
+    this.homeScore,
+    this.awayScore,
+    this.isDouble = false,
+    this.isBlank = false,
+    this.statusLabel,
+  });
+
+  factory FixtureModel.fromJson(Map<String, dynamic> json) {
+    return FixtureModel(
+      fplId: json['fpl_id'] as int,
+      gameweek: json['gameweek'] as int?,
+      kickoffTime: json['kickoff_time'] != null
+          ? DateTime.tryParse(json['kickoff_time'] as String)
+          : null,
+      homeTeamFplId: json['home_team_fpl_id'] as int? ?? 0,
+      homeTeamShortName: json['home_team_short_name'] as String? ?? 'HOME',
+      homeTeamName: json['home_team_name'] as String? ?? '',
+      awayTeamFplId: json['away_team_fpl_id'] as int? ?? 0,
+      awayTeamShortName: json['away_team_short_name'] as String? ?? 'AWAY',
+      awayTeamName: json['away_team_name'] as String? ?? '',
+      finished: json['finished'] as bool? ?? false,
+      homeScore: json['home_score'] as int?,
+      awayScore: json['away_score'] as int?,
+      isDouble: json['is_double'] as bool? ?? false,
+      isBlank: json['is_blank'] as bool? ?? false,
+      statusLabel: json['status_label'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'fpl_id': fplId,
+        'gameweek': gameweek,
+        'kickoff_time': kickoffTime?.toIso8601String(),
+        'home_team_fpl_id': homeTeamFplId,
+        'home_team_short_name': homeTeamShortName,
+        'home_team_name': homeTeamName,
+        'away_team_fpl_id': awayTeamFplId,
+        'away_team_short_name': awayTeamShortName,
+        'away_team_name': awayTeamName,
+        'finished': finished,
+        'home_score': homeScore,
+        'away_score': awayScore,
+        'is_double': isDouble,
+        'is_blank': isBlank,
+        'status_label': statusLabel,
+      };
+}
+
+class GameweekSummaryModel {
+  final int averageScore;
+  final int highestScore;
+  final int? liveRank;
+  final int? overallRank;
+
+  const GameweekSummaryModel({
+    this.averageScore = 0,
+    this.highestScore = 0,
+    this.liveRank,
+    this.overallRank,
+  });
+
+  factory GameweekSummaryModel.fromJson(Map<String, dynamic> json) {
+    return GameweekSummaryModel(
+      averageScore: json['average_score'] as int? ?? 0,
+      highestScore: json['highest_score'] as int? ?? 0,
+      liveRank: json['live_rank'] as int?,
+      overallRank: json['overall_rank'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'average_score': averageScore,
+        'highest_score': highestScore,
+        'live_rank': liveRank,
+        'overall_rank': overallRank,
+      };
+}
+

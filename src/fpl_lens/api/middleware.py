@@ -34,3 +34,34 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
             return response
         finally:
             request_id_ctx.reset(token)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware enforcing baseline security headers across all responses (Backend Design §12.1)
+    and ensuring Cache-Control: no-store on all user account endpoints.
+    """
+
+    ACCOUNT_PATHS = (
+        "/api/v1/auth",
+        "/api/v1/me",
+        "/api/v1/devices",
+        "/api/v1/squads",
+    )
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+
+        # Baseline security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Cache-Control: no-store on account responses
+        path = request.url.path
+        if any(path.startswith(prefix) for prefix in self.ACCOUNT_PATHS):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+
+        return response
+

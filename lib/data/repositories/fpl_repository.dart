@@ -25,6 +25,7 @@ abstract class IFplRepository {
   Future<HistoryResponse> getHistory(int teamId);
   Future<List<TransferItemModel>> getTransfers(int teamId);
   Future<CurrentGameweekResponse> getCurrentGameweek();
+  Future<List<FixtureModel>> getFixtures({int? gw});
   Future<Map<String, dynamic>> getProjectionBundle(int gw);
   Future<Map<String, dynamic>> getPlayerProjection(int gw, int fplId);
   Future<List<Map<String, dynamic>>> searchPlayers(String query, {int limit = 20});
@@ -106,6 +107,53 @@ class FplRepository implements IFplRepository {
     try {
       final response = await _dio.get('/api/v1/gameweeks/current');
       return CurrentGameweekResponse.fromJson(response.data as Map<String, dynamic>);
+    } catch (e) {
+      throw ErrorMapper.fromException(e);
+    }
+  }
+
+  @override
+  Future<List<FixtureModel>> getFixtures({int? gw}) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (gw != null) queryParams['gw'] = gw;
+      final response = await _dio.get(
+        '/api/v1/fixtures',
+        queryParameters: queryParams,
+      );
+      final list = response.data as List<dynamic>;
+      final fixtures = list.map((e) => FixtureModel.fromJson(e as Map<String, dynamic>)).toList();
+
+      // Compute Double and Blank markers per team
+      final teamCounts = <int, int>{};
+      for (final f in fixtures) {
+        teamCounts[f.homeTeamFplId] = (teamCounts[f.homeTeamFplId] ?? 0) + 1;
+        teamCounts[f.awayTeamFplId] = (teamCounts[f.awayTeamFplId] ?? 0) + 1;
+      }
+
+      return fixtures.map((f) {
+        final homeCount = teamCounts[f.homeTeamFplId] ?? 1;
+        final awayCount = teamCounts[f.awayTeamFplId] ?? 1;
+        final isDouble = homeCount > 1 || awayCount > 1;
+        final isBlank = homeCount == 0 || awayCount == 0;
+        return FixtureModel(
+          fplId: f.fplId,
+          gameweek: f.gameweek,
+          kickoffTime: f.kickoffTime,
+          homeTeamFplId: f.homeTeamFplId,
+          homeTeamShortName: f.homeTeamShortName,
+          homeTeamName: f.homeTeamName,
+          awayTeamFplId: f.awayTeamFplId,
+          awayTeamShortName: f.awayTeamShortName,
+          awayTeamName: f.awayTeamName,
+          finished: f.finished,
+          homeScore: f.homeScore,
+          awayScore: f.awayScore,
+          isDouble: isDouble,
+          isBlank: isBlank,
+          statusLabel: f.statusLabel,
+        );
+      }).toList();
     } catch (e) {
       throw ErrorMapper.fromException(e);
     }

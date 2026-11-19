@@ -139,6 +139,52 @@ class Settings(BaseSettings):
     JOB_TOKEN: str | None = Field(default=None, validation_alias="JOB_TOKEN")
     JOB_TOKEN_REF: str | None = Field(default=None, validation_alias="JOB_TOKEN_REF")
 
+    # Rate Limits (Backend Design §12.4)
+    RATE_LIMIT_LOGIN_ACCOUNT_FAILURES: int = Field(
+        default=10, validation_alias="RATE_LIMIT_LOGIN_ACCOUNT_FAILURES"
+    )
+    RATE_LIMIT_LOGIN_ACCOUNT_WINDOW_SECONDS: int = Field(
+        default=900, validation_alias="RATE_LIMIT_LOGIN_ACCOUNT_WINDOW_SECONDS"
+    )
+    RATE_LIMIT_LOGIN_IP_REQUESTS: int = Field(
+        default=100, validation_alias="RATE_LIMIT_LOGIN_IP_REQUESTS"
+    )
+    RATE_LIMIT_LOGIN_IP_WINDOW_SECONDS: int = Field(
+        default=900, validation_alias="RATE_LIMIT_LOGIN_IP_WINDOW_SECONDS"
+    )
+    RATE_LIMIT_REGISTRATION_IP_REQUESTS: int = Field(
+        default=10, validation_alias="RATE_LIMIT_REGISTRATION_IP_REQUESTS"
+    )
+    RATE_LIMIT_REGISTRATION_IP_WINDOW_SECONDS: int = Field(
+        default=3600, validation_alias="RATE_LIMIT_REGISTRATION_IP_WINDOW_SECONDS"
+    )
+    RATE_LIMIT_VERIFY_CODE_PER_MINUTE: int = Field(
+        default=1, validation_alias="RATE_LIMIT_VERIFY_CODE_PER_MINUTE"
+    )
+    RATE_LIMIT_VERIFY_CODE_PER_HOUR: int = Field(
+        default=5, validation_alias="RATE_LIMIT_VERIFY_CODE_PER_HOUR"
+    )
+    RATE_LIMIT_TEAM_LOOKUP_IP_REQUESTS: int = Field(
+        default=30, validation_alias="RATE_LIMIT_TEAM_LOOKUP_IP_REQUESTS"
+    )
+    RATE_LIMIT_TEAM_LOOKUP_IP_WINDOW_SECONDS: int = Field(
+        default=3600, validation_alias="RATE_LIMIT_TEAM_LOOKUP_IP_WINDOW_SECONDS"
+    )
+    RATE_LIMIT_GENERAL_USER_REQUESTS: int = Field(
+        default=300, validation_alias="RATE_LIMIT_GENERAL_USER_REQUESTS"
+    )
+    RATE_LIMIT_GENERAL_USER_WINDOW_SECONDS: int = Field(
+        default=60, validation_alias="RATE_LIMIT_GENERAL_USER_WINDOW_SECONDS"
+    )
+
+    # Backup & Encryption
+    BACKUP_ENCRYPTION_KEY: str | None = Field(
+        default=None, validation_alias="BACKUP_ENCRYPTION_KEY"
+    )
+    BACKUP_ENCRYPTION_KEY_REF: str | None = Field(
+        default=None, validation_alias="BACKUP_ENCRYPTION_KEY_REF"
+    )
+
     model_config = {
         "extra": "ignore",
         "case_sensitive": False,
@@ -203,6 +249,14 @@ class Settings(BaseSettings):
         if self.SMTP_USERNAME and "@" in self.SMTP_USERNAME:
             return self.SMTP_USERNAME
         return self.EMAIL_FROM_ADDRESS
+
+    def get_effective_backup_encryption_key(self) -> str:
+        if self.BACKUP_ENCRYPTION_KEY_REF:
+            resolved = resolve_secret_ref(self.BACKUP_ENCRYPTION_KEY_REF)
+            if resolved:
+                return resolved
+        return self.BACKUP_ENCRYPTION_KEY or "dGVzdC1iYWNrdXAtZW5jcnlwdGlvbi1rZXktMzItYnl0ZXM="
+
 
 
 settings = Settings()
