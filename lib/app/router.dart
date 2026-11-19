@@ -13,8 +13,10 @@ import '../features/onboarding/screens/load_squad_screen.dart';
 import '../features/onboarding/screens/team_check_screen.dart';
 import '../features/lineup/screens/heatmap_screen.dart';
 import '../features/player/screens/player_detail_screen.dart';
+import '../core/network/error_mapper.dart';
 import '../data/models/squad_resolve_models.dart';
 import '../features/ai_providers/providers/ai_key_provider.dart';
+import '../features/error/screens/error_screen.dart';
 import '../features/scan/screens/resolve_players_screen.dart';
 import '../features/scan/screens/scan_squad_screen.dart';
 import '../features/settings/screens/ai_key_screen.dart';
@@ -133,6 +135,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/gameweek',
         name: 'gameweek',
         builder: (context, state) => const GameweekScreen(),
+      ),
+      GoRoute(
+        path: '/error',
+        name: 'error',
+        builder: (context, state) {
+          final args = state.extra as ErrorScreenArgs?;
+          final kindStr = state.uri.queryParameters['kind'];
+          final error = args?.error ??
+              AppError(
+                kind: AppErrorKind.values.firstWhere(
+                  (k) => k.name == kindStr,
+                  orElse: () => AppErrorKind.unknown,
+                ),
+                message: '',
+                retryable: true,
+              );
+          return ErrorScreen(
+            error: error,
+            onRetry: args?.onRetry,
+            fromScreen: args?.fromScreen ?? 'unknown',
+            lastUpdated: args?.lastUpdated,
+          );
+        },
       ),
       GoRoute(
         path: '/scan',
