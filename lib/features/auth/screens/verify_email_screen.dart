@@ -2,12 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/tokens.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/code_input.dart';
+import '../../../core/widgets/glass_container.dart';
 import '../providers/auth_provider.dart';
 
+/// Verify Email screen (/auth/verify) per Visual Redesign Design Document §8.4 & Sprint R3.
+///
+/// Features lock icon, title, email subtitle, 6-digit code boxes inside a glass card,
+/// resend countdown, and sign-out option.
 class VerifyEmailScreen extends ConsumerStatefulWidget {
   const VerifyEmailScreen({super.key});
 
@@ -23,6 +29,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   int _cooldownSeconds = 60; // 60s cooldown
 
   bool _hasError = false;
+  String _enteredCode = '';
 
   @override
   void initState() {
@@ -37,18 +44,18 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_expirySeconds <= 1) {
         timer.cancel();
-        setState(() => _expirySeconds = 0);
+        if (mounted) setState(() => _expirySeconds = 0);
       } else {
-        setState(() => _expirySeconds--);
+        if (mounted) setState(() => _expirySeconds--);
       }
     });
 
     _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_cooldownSeconds <= 1) {
         timer.cancel();
-        setState(() => _cooldownSeconds = 0);
+        if (mounted) setState(() => _cooldownSeconds = 0);
       } else {
-        setState(() => _cooldownSeconds--);
+        if (mounted) setState(() => _cooldownSeconds--);
       }
     });
   }
@@ -79,7 +86,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   }
 
   Future<void> _handleCodeCompleted(String code) async {
-    setState(() => _hasError = false);
+    setState(() {
+      _hasError = false;
+      _enteredCode = code;
+    });
+
     final success = await ref.read(authNotifierProvider.notifier).verifyEmail(code);
 
     if (success && mounted) {
@@ -97,18 +108,17 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   Future<void> _handleResend() async {
     try {
       await ref.read(authNotifierProvider.notifier).resendVerificationCode();
-      setState(() {
-        _cooldownSeconds = 60;
-        _expirySeconds = 600;
-        _hasError = false;
-      });
-      _startTimers();
       if (mounted) {
+        setState(() {
+          _cooldownSeconds = 60;
+          _hasError = false;
+        });
+        _startTimers();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('A new verification code has been sent.')),
+          const SnackBar(content: Text('We sent a new code.')),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to resend code. Please try again.')),
@@ -119,108 +129,158 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final authState = ref.watch(authNotifierProvider);
-    final user = authState.user;
     final isLoading = authState.status == AuthStatus.loading;
-    final isExpired = _expirySeconds <= 0;
+    final user = authState.user;
+    final maskedEmail = _maskEmail(user?.email);
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
-      appBar: AppBar(
-        title: const SizedBox.shrink(),
-        actions: [
-          TextButton(
-            onPressed: !isLoading
-                ? () async {
-                    await ref.read(authNotifierProvider.notifier).logout();
-                    if (context.mounted) context.go('/auth');
-                  }
-                : null,
-            child: Text(
-              'Sign out',
-              style: AppTextStyles.label.copyWith(color: AppTokens.neonPrimary),
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: colors.bgBase,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppTokens.space16),
-              const Text('Check your email', style: AppTextStyles.title),
-              const SizedBox(height: AppTokens.space8),
-              Text(
-                'We sent a six-digit code to ${_maskEmail(user?.email)}. It expires in 10 minutes.',
-                style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
-              ),
-              const SizedBox(height: AppTokens.space32),
-
-              // 6-digit CodeInput
-              CodeInput(
-                length: 6,
-                enabled: !isLoading && !isExpired,
-                hasError: _hasError,
-                onCompleted: _handleCodeCompleted,
-              ),
-              const SizedBox(height: AppTokens.space16),
-
-              // Inline error directly under CodeInput (wrong code / expired / rate limited)
-              if (_hasError || authState.errorMessage != null) ...[
-                Semantics(
-                  liveRegion: true,
-                  child: Container(
-                    padding: const EdgeInsets.all(AppTokens.space12),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTokens.screenGutter,
+              vertical: AppTokens.space24,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420.0),
+              child: Column(
+                children: [
+                  // Lock icon in accent per §8.4
+                  Container(
+                    width: 56.0,
+                    height: 56.0,
                     decoration: BoxDecoration(
-                      color: AppTokens.statusOut.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(AppTokens.radiusInput),
-                      border: Border.all(color: AppTokens.statusOut),
+                      color: colors.accent.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Icon(
+                      Icons.lock_outline_rounded,
+                      color: colors.accent,
+                      size: 28.0,
+                    ),
+                  ),
+                  const SizedBox(height: AppTokens.space16),
+
+                  // Title & Subtitle per §8.4 and §9.1
+                  Text(
+                    'Check your email',
+                    style: AppTextStyles.title.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppTokens.space8),
+                  Text(
+                    'We sent a six-digit code to $maskedEmail.',
+                    style: AppTextStyles.body.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppTokens.space24),
+
+                  // Glass card holding CodeBoxes
+                  GlassContainer(
+                    blur: 20.0,
+                    borderRadius: BorderRadius.circular(AppTokens.radiusModal),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTokens.space16,
+                      vertical: AppTokens.space24,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Icon(Icons.error_outline, size: 16.0, color: AppTokens.statusOut),
-                        const SizedBox(width: AppTokens.space8),
-                        Flexible(
-                          child: Text(
-                            authState.errorMessage ?? "That code doesn't match. Please try again.",
-                            style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
-                            textAlign: TextAlign.center,
+                        // Six CodeBoxes (C16)
+                        Center(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: CodeInput(
+                              onCompleted: _handleCodeCompleted,
+                              hasError: _hasError,
+                              enabled: !isLoading && _expirySeconds > 0,
+                            ),
                           ),
+                        ),
+                        const SizedBox(height: AppTokens.space16),
+
+                        // Timer text
+                        Center(
+                          child: Text(
+                            _expirySeconds > 0
+                                ? 'Code expires in ${_formatTime(_expirySeconds)}'
+                                : 'Code expired. Tap Resend Code for a new one.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: _expirySeconds > 0 ? colors.textDisabled : colors.statusError,
+                            ),
+                          ),
+                        ),
+
+                        // Error message
+                        if (_hasError || authState.errorMessage != null) ...[
+                          const SizedBox(height: AppTokens.space12),
+                          Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              authState.errorMessage ?? "That code isn't right. Check the email and try again.",
+                              style: AppTextStyles.label.copyWith(
+                                color: colors.statusError,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: AppTokens.space24),
+
+                        // Verify button (C1)
+                        AppButton(
+                          label: 'Verify Code',
+                          onPressed: _enteredCode.length == 6 && !isLoading && _expirySeconds > 0
+                              ? () => _handleCodeCompleted(_enteredCode)
+                              : null,
+                          isLoading: isLoading,
+                        ),
+
+                        const SizedBox(height: AppTokens.space12),
+
+                        // Resend Code (C2)
+                        AppButton(
+                          label: _cooldownSeconds > 0 ? 'Resend in ${_cooldownSeconds}s' : 'Resend Code',
+                          variant: AppButtonVariant.secondary,
+                          onPressed: _cooldownSeconds == 0 && !isLoading ? _handleResend : null,
                         ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: AppTokens.space16),
-              ],
 
-              // Resend Code Button
-              AppButton(
-                label: _cooldownSeconds > 0
-                    ? 'Resend in $_cooldownSeconds s'
-                    : 'Resend code',
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.large,
-                onPressed: _cooldownSeconds == 0 && !isLoading ? _handleResend : null,
-              ),
-              const SizedBox(height: AppTokens.space24),
+                  const SizedBox(height: AppTokens.space24),
 
-              // Expiry Notice at the bottom
-              Center(
-                child: Text(
-                  isExpired
-                      ? 'This code has expired.'
-                      : 'The code expires in ${_formatTime(_expirySeconds)}.',
-                  style: AppTextStyles.caption.copyWith(
-                    color: isExpired ? AppTokens.statusOut : AppTokens.textDisabled,
+                  // Sign out link (C4)
+                  TextButton(
+                    onPressed: !isLoading
+                        ? () async {
+                            await ref.read(authNotifierProvider.notifier).logout();
+                            if (context.mounted) {
+                              context.go('/auth');
+                            }
+                          }
+                        : null,
+                    child: Text(
+                      'Sign out',
+                      style: AppTextStyles.body.copyWith(
+                        color: colors.textSecondary,
+                        fontSize: 13.0,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(height: AppTokens.space16),
-            ],
+            ),
           ),
         ),
       ),

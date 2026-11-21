@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/formatting/app_formatters.dart';
 import '../../../core/network/error_mapper.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/card_container.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/team_id_field.dart';
@@ -13,6 +15,10 @@ import '../../../data/models/fpl_models.dart';
 import '../../../data/repositories/fpl_repository.dart';
 import '../../auth/providers/auth_provider.dart';
 
+/// Team Check screen (/onboarding/team) per Visual Redesign Design Document §8.5 & Sprint R3.
+///
+/// Features large Team ID field, info card ("FPL Lens never asks for your FPL account password"),
+/// confirmation card with manager name and rank, and continue button.
 class TeamCheckScreen extends ConsumerStatefulWidget {
   const TeamCheckScreen({super.key});
 
@@ -81,12 +87,15 @@ class _TeamCheckScreenState extends ConsumerState<TeamCheckScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
-        title: const Text('Your team', style: AppTextStyles.title),
+        backgroundColor: colors.bgBase,
+        title: Text('Your team', style: AppTextStyles.title.copyWith(color: colors.textPrimary)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, color: colors.textPrimary),
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
@@ -95,6 +104,7 @@ class _TeamCheckScreenState extends ConsumerState<TeamCheckScreen> {
             }
           },
         ),
+        elevation: 0,
       ),
       body: SafeArea(
         child: Padding(
@@ -128,7 +138,7 @@ class _TeamCheckScreenState extends ConsumerState<TeamCheckScreen> {
                         const SizedBox(height: AppTokens.space24),
                       ],
                       if (_isLoading) ...[
-                        _buildSkeletonTeamCard(),
+                        _buildSkeletonTeamCard(colors),
                       ] else if (_error != null) ...[
                         ErrorState(
                           error: _error!,
@@ -145,14 +155,41 @@ class _TeamCheckScreenState extends ConsumerState<TeamCheckScreen> {
                           },
                         ),
                       ] else if (_entry != null) ...[
-                        _buildTeamCard(_entry!),
+                        _buildTeamCard(_entry!, colors),
                         const SizedBox(height: AppTokens.space24),
-                        const Text(
+                        Text(
                           'Is this your team?',
-                          style: AppTextStyles.body,
+                          style: AppTextStyles.body.copyWith(color: colors.textSecondary),
                           textAlign: TextAlign.center,
                         ),
                       ],
+
+                      const SizedBox(height: AppTokens.space24),
+
+                      // Privacy Info Card per §8.5 & §9.1 (team.info)
+                      CardContainer(
+                        variant: CardVariant.elevated,
+                        padding: const EdgeInsets.all(AppTokens.space16),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.security_rounded,
+                              color: colors.accent,
+                              size: 20.0,
+                            ),
+                            const SizedBox(width: AppTokens.space12),
+                            Expanded(
+                              child: Text(
+                                'FPL Lens never asks for your FPL account password.',
+                                style: AppTextStyles.label.copyWith(
+                                  color: colors.textSecondary,
+                                  fontSize: 13.0,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -182,7 +219,7 @@ class _TeamCheckScreenState extends ConsumerState<TeamCheckScreen> {
     );
   }
 
-  Widget _buildTeamCard(EntryModel entry) {
+  Widget _buildTeamCard(EntryModel entry, AppColors colors) {
     final managerName = '${entry.playerFirstName} ${entry.playerLastName}'.trim();
     final rankText = entry.summaryOverallRank != null
         ? 'Rank ${AppFormatters.formatRank(entry.summaryOverallRank!)}'
@@ -193,44 +230,47 @@ class _TeamCheckScreenState extends ConsumerState<TeamCheckScreen> {
 
     return Semantics(
       label: semantics,
-      child: Container(
+      child: CardContainer(
+        variant: CardVariant.surface,
+        accentRing: true,
         padding: const EdgeInsets.all(AppTokens.space16),
-        decoration: BoxDecoration(
-          color: AppTokens.bgSurface,
-          borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-          border: Border.all(color: AppTokens.borderSubtle),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.shield, color: AppTokens.goldPrimary, size: 28),
-                const SizedBox(width: AppTokens.space12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry.name,
-                        style: AppTextStyles.headline,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (managerName.isNotEmpty) ...[
-                        const SizedBox(height: AppTokens.space2),
-                        Text(
-                          managerName,
-                          style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
-                        ),
-                      ],
-                    ],
+                  child: Text(
+                    entry.name,
+                    style: AppTextStyles.title.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                  decoration: BoxDecoration(
+                    color: colors.accentSoft.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppTokens.radiusBase),
+                  ),
+                  child: Text(
+                    'ID ${entry.id}',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.accent,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: AppTokens.space4),
+            Text(
+              'Manager: $managerName',
+              style: AppTextStyles.body.copyWith(color: colors.textSecondary),
+            ),
             const SizedBox(height: AppTokens.space16),
-            const Divider(color: AppTokens.borderSubtle, height: 1),
+            Divider(color: colors.borderSubtle, height: 1.0),
             const SizedBox(height: AppTokens.space16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -238,22 +278,34 @@ class _TeamCheckScreenState extends ConsumerState<TeamCheckScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Total points', style: AppTextStyles.label),
-                    const SizedBox(height: AppTokens.space4),
                     Text(
-                      '${entry.summaryOverallPoints} pts',
-                      style: AppTextStyles.numeric.copyWith(fontSize: 18),
+                      'Total Points',
+                      style: AppTextStyles.label.copyWith(color: colors.textDisabled),
+                    ),
+                    const SizedBox(height: AppTokens.space2),
+                    Text(
+                      AppFormatters.formatPoints(entry.summaryOverallPoints),
+                      style: AppTextStyles.figure.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text('Overall rank', style: AppTextStyles.label),
-                    const SizedBox(height: AppTokens.space4),
+                    Text(
+                      'Overall Rank',
+                      style: AppTextStyles.label.copyWith(color: colors.textDisabled),
+                    ),
+                    const SizedBox(height: AppTokens.space2),
                     Text(
                       rankText,
-                      style: AppTextStyles.numeric.copyWith(fontSize: 18),
+                      style: AppTextStyles.figure.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -265,25 +317,24 @@ class _TeamCheckScreenState extends ConsumerState<TeamCheckScreen> {
     );
   }
 
-  Widget _buildSkeletonTeamCard() {
-    return Container(
+  Widget _buildSkeletonTeamCard(AppColors colors) {
+    return CardContainer(
+      variant: CardVariant.surface,
       padding: const EdgeInsets.all(AppTokens.space16),
-      decoration: BoxDecoration(
-        color: AppTokens.bgSurface,
-        borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          SkeletonLoader(width: 200, height: 24),
+          SkeletonLoader(width: 180, height: 24),
           SizedBox(height: AppTokens.space8),
-          SkeletonLoader(width: 140, height: 16),
-          SizedBox(height: AppTokens.space24),
+          SkeletonLoader(width: 120, height: 16),
+          SizedBox(height: AppTokens.space16),
+          SkeletonLoader(width: double.infinity, height: 1),
+          SizedBox(height: AppTokens.space16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               SkeletonLoader(width: 80, height: 32),
-              SkeletonLoader(width: 100, height: 32),
+              SkeletonLoader(width: 80, height: 32),
             ],
           ),
         ],
