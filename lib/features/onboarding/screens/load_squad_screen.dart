@@ -75,7 +75,9 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
     });
 
     final currentStepIndex = _getStepIndex(squadState.step);
-    final progressFraction = currentStepIndex / 4.0;
+    final progressFraction = (squadState.step == SquadLoadingStep.completed)
+        ? 1.0
+        : (currentStepIndex / 4.0).clamp(0.08, 1.0);
 
     return Scaffold(
       backgroundColor: AppTokens.bgBase,
@@ -94,59 +96,30 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(AppTokens.screenGutter),
+          padding: const EdgeInsets.symmetric(horizontal: AppTokens.space32),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: AppTokens.space16),
-              // Determinate progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: LinearProgressIndicator(
-                  value: progressFraction,
-                  minHeight: 4,
-                  backgroundColor: AppTokens.bgElevated,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppTokens.neonPrimary),
+              if (squadState.step != SquadLoadingStep.failed) ...[
+                const Spacer(flex: 2),
+                // Smooth loading line filling up
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+                  child: TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOut,
+                    tween: Tween<double>(begin: 0.08, end: progressFraction),
+                    builder: (context, value, _) => LinearProgressIndicator(
+                      value: value,
+                      minHeight: 6,
+                      backgroundColor: AppTokens.bgElevated,
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppTokens.neonPrimary),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppTokens.space32),
-
-              // 4 Step indicators
-              _buildStepRow(
-                index: 1,
-                title: 'Team details',
-                state: _getStepStatus(1, squadState),
-              ),
-              const SizedBox(height: AppTokens.space16),
-              _buildStepRow(
-                index: 2,
-                title: 'Squad for this gameweek',
-                state: _getStepStatus(2, squadState),
-              ),
-              const SizedBox(height: AppTokens.space16),
-              _buildStepRow(
-                index: 3,
-                title: 'Transfer history',
-                state: _getStepStatus(3, squadState),
-              ),
-              const SizedBox(height: AppTokens.space16),
-              _buildStepRow(
-                index: 4,
-                title: 'Gameweek history',
-                state: _getStepStatus(4, squadState),
-              ),
-
-              const SizedBox(height: AppTokens.space24),
-              // Current step caption
-              Text(
-                _getStepCaption(squadState),
-                style: AppTextStyles.caption,
-                textAlign: TextAlign.center,
-              ),
-
-              const Spacer(),
-
-              if (squadState.step == SquadLoadingStep.failed) ...[
+                const Spacer(flex: 3),
+              ] else ...[
                 Builder(
                   builder: (context) {
                     final err = squadState.error ??
@@ -167,7 +140,6 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: AppTokens.space16),
               ],
             ],
           ),
@@ -194,115 +166,4 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
         return 2;
     }
   }
-
-  _StepVisualState _getStepStatus(int stepIndex, SquadState state) {
-    if (state.step == SquadLoadingStep.failed && state.failedStep == stepIndex) {
-      return _StepVisualState.failed;
-    }
-
-    final currentIndex = _getStepIndex(state.step);
-    if (state.step == SquadLoadingStep.completed || currentIndex > stepIndex) {
-      return _StepVisualState.done;
-    } else if (currentIndex == stepIndex) {
-      return _StepVisualState.active;
-    } else {
-      return _StepVisualState.pending;
-    }
-  }
-
-  String _getStepCaption(SquadState state) {
-    switch (state.step) {
-      case SquadLoadingStep.idle:
-      case SquadLoadingStep.step1TeamDetails:
-        return 'Verifying team details...';
-      case SquadLoadingStep.step2SquadPicks:
-        return 'Fetching latest squad picks...';
-      case SquadLoadingStep.step3Transfers:
-        return 'Importing transfer history for price derivation...';
-      case SquadLoadingStep.step4History:
-        return 'Importing past gameweek ranks and scores...';
-      case SquadLoadingStep.completed:
-        return 'Squad loaded successfully!';
-      case SquadLoadingStep.failed:
-        return 'A network error occurred.';
-    }
-  }
-
-  Widget _buildStepRow({
-    required int index,
-    required String title,
-    required _StepVisualState state,
-  }) {
-    Widget iconWidget;
-    Color textColor = AppTokens.textPrimary;
-
-    switch (state) {
-      case _StepVisualState.pending:
-        iconWidget = Container(
-          width: 24,
-          height: 24,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTokens.bgElevated,
-          ),
-          child: Text(
-            '$index',
-            style: AppTextStyles.caption.copyWith(color: AppTokens.textDisabled),
-          ),
-        );
-        textColor = AppTokens.textDisabled;
-        break;
-      case _StepVisualState.active:
-        iconWidget = const SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(AppTokens.neonPrimary),
-          ),
-        );
-        textColor = AppTokens.neonPrimary;
-        break;
-      case _StepVisualState.done:
-        iconWidget = const Icon(
-          Icons.check_circle_rounded,
-          color: AppTokens.statusAvailable,
-          size: 24,
-        );
-        textColor = AppTokens.textPrimary;
-        break;
-      case _StepVisualState.failed:
-        iconWidget = const Icon(
-          Icons.cancel_rounded,
-          color: AppTokens.statusOut,
-          size: 24,
-        );
-        textColor = AppTokens.statusOut;
-        break;
-    }
-
-    return Row(
-      children: [
-        iconWidget,
-        const SizedBox(width: AppTokens.space12),
-        Expanded(
-          child: Text(
-            title,
-            style: AppTextStyles.body.copyWith(
-              color: textColor,
-              fontWeight: state == _StepVisualState.active ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-enum _StepVisualState {
-  pending,
-  active,
-  done,
-  failed,
 }
