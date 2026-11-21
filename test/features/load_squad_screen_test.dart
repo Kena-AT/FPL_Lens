@@ -85,7 +85,7 @@ void main() {
     );
   }
 
-  testWidgets('LoadSquadScreen displays 4 loading steps and progress bar', (tester) async {
+  testWidgets('LoadSquadScreen displays loading line filling up without listing process steps', (tester) async {
     when(() => mockFplRepo.getEntry(any())).thenAnswer((_) async => Completer<EntryModel>().future);
 
     await tester.pumpWidget(
@@ -94,11 +94,12 @@ void main() {
     await tester.pump();
 
     expect(find.text('Loading your squad'), findsOneWidget);
-    expect(find.text('Team details'), findsOneWidget);
-    expect(find.text('Squad for this gameweek'), findsOneWidget);
-    expect(find.text('Transfer history'), findsOneWidget);
-    expect(find.text('Gameweek history'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    // Verified: No process text or listed step rows cluttering the loading screen
+    expect(find.text('Team details'), findsNothing);
+    expect(find.text('Squad for this gameweek'), findsNothing);
+    expect(find.text('Transfer history'), findsNothing);
+    expect(find.text('Gameweek history'), findsNothing);
   });
 }
 
