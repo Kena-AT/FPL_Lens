@@ -23,6 +23,8 @@ void main() {
 
     setUp(() {
       mockSecureStore = MockSecureStore();
+      when(() => mockSecureStore.deleteSession()).thenAnswer((_) async {});
+      when(() => mockSecureStore.deleteRefreshToken()).thenAnswer((_) async {});
       loggedOut = false;
       dio = Dio(BaseOptions(baseUrl: 'https://test.example.com'));
       interceptor = AuthInterceptor(

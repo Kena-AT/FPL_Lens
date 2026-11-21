@@ -43,7 +43,7 @@ abstract final class ErrorMapper {
         exception.type == DioExceptionType.connectionTimeout) {
       return const AppError(
         kind: AppErrorKind.offline,
-        message: "You're offline. Connect to continue.",
+        message: "You're offline. Connect to calculate lineups. Your saved history is still available.",
         retryable: true,
       );
     }
@@ -133,7 +133,7 @@ abstract final class ErrorMapper {
     if (statusCode == 503) {
       return const AppError(
         kind: AppErrorKind.fplUnavailable,
-        message: "FPL is temporarily unavailable. Try again shortly.",
+        message: "FPL isn't responding right now. Try again in a few minutes, or scan a screenshot instead.",
         retryable: true,
       );
     }

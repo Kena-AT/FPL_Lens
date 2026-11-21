@@ -77,6 +77,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.status == AuthStatus.loading;
 
+    final email = _emailController.text.trim();
+    final emailError = email.isNotEmpty && !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email)
+        ? 'Enter a valid email address.'
+        : null;
+
+    final password = _passwordController.text;
+    final passwordError = password.isNotEmpty && password.length < 8
+        ? 'Use at least 8 characters.'
+        : null;
+
+    final displayName = _displayNameController.text.trim();
+    final nameError = displayName.isNotEmpty && (displayName.length < 2 || displayName.length > 32)
+        ? 'Use 2 to 32 characters.'
+        : null;
+
     return Scaffold(
       backgroundColor: AppTokens.bgBase,
       appBar: AppBar(
@@ -97,7 +112,36 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 'We need your FPL team ID to load your squad.',
                 style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
               ),
-              const SizedBox(height: AppTokens.space24),
+              const SizedBox(height: AppTokens.space16),
+
+              // Server Error Banner (placed at the top per spec)
+              if (authState.errorMessage != null) ...[
+                Semantics(
+                  liveRegion: true,
+                  child: Container(
+                    padding: const EdgeInsets.all(AppTokens.space12),
+                    decoration: BoxDecoration(
+                      color: AppTokens.statusOut.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(AppTokens.radiusInput),
+                      border: Border.all(color: AppTokens.statusOut),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, size: 16.0, color: AppTokens.statusOut),
+                        const SizedBox(width: AppTokens.space8),
+                        Expanded(
+                          child: Text(
+                            authState.errorMessage!,
+                            style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
+                            textAlign: TextAlign.left,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTokens.space16),
+              ],
 
               // 1. Email
               AppTextField(
@@ -105,6 +149,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 hint: 'name@example.com',
                 controller: _emailController,
                 type: AppTextFieldType.email,
+                error: emailError,
                 enabled: !isLoading,
               ),
               const SizedBox(height: AppTokens.space16),
@@ -114,11 +159,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 label: 'Password',
                 controller: _passwordController,
                 type: AppTextFieldType.password,
+                error: passwordError,
                 helper: _passwordController.text.isEmpty
                     ? 'At least 8 characters.'
-                    : (_passwordController.text.length < 8
-                        ? '${_passwordController.text.length}/8 characters (at least 8 required)'
-                        : 'Password length requirement met (${_passwordController.text.length} characters)'),
+                    : null,
                 enabled: !isLoading,
               ),
               const SizedBox(height: AppTokens.space16),
@@ -128,7 +172,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 label: 'Display name',
                 hint: 'Manager Name',
                 controller: _displayNameController,
-                helper: 'Use 2 to 32 characters.',
+                error: nameError,
+                helper: nameError == null ? 'Use 2 to 32 characters.' : null,
                 maxLength: 32,
                 enabled: !isLoading,
               ),
@@ -167,24 +212,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: AppTokens.space16),
-
-              if (authState.errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppTokens.space12),
-                  decoration: BoxDecoration(
-                    color: AppTokens.statusOut.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(AppTokens.radiusInput),
-                    border: Border.all(color: AppTokens.statusOut),
-                  ),
-                  child: Text(
-                    authState.errorMessage!,
-                    style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: AppTokens.space16),
-              ],
+              const SizedBox(height: AppTokens.space24),
 
               // 6. Submit Button
               AppButton(

@@ -69,10 +69,16 @@ class LineupNotifier extends StateNotifier<LineupState> {
   LineupNotifier(this._ref) : super(const LineupState()) {
     // Automatically trigger optimization when squad is ready or changes
     _ref.listen<SquadState>(squadNotifierProvider, (prev, next) {
-      if (next.hasSquad && (state.result == null || prev?.squad != next.squad) && !state.isOptimizing) {
+      if (next.hasSquad && next.squad.length == 15 && (state.result == null || prev?.squad != next.squad) && !state.isOptimizing) {
         optimize();
       }
     });
+
+    // If squad is ALREADY available when LineupNotifier is initialized, trigger optimization immediately
+    final currentSquad = _ref.read(squadNotifierProvider);
+    if (currentSquad.hasSquad && currentSquad.squad.length == 15 && !state.isOptimizing) {
+      Future.microtask(() => optimize());
+    }
   }
 
   /// Converts Drift squad player records into PlayerCandidate models for the optimiser
@@ -121,8 +127,14 @@ class LineupNotifier extends StateNotifier<LineupState> {
     final sorted = List<SquadPlayersTableData>.from(squad)
       ..sort((a, b) => a.positionOrder.compareTo(b.positionOrder));
 
-    final starterRows = sorted.where((p) => p.positionOrder >= 1 && p.positionOrder <= 11).toList();
-    final benchRows = sorted.where((p) => p.positionOrder >= 12 && p.positionOrder <= 15).toList();
+    var starterRows = sorted.where((p) => p.positionOrder >= 1 && p.positionOrder <= 11).toList();
+    var benchRows = sorted.where((p) => p.positionOrder >= 12 && p.positionOrder <= 15).toList();
+
+    // Resilient fallback if positionOrder is not standard 1..15
+    if (starterRows.length != 11 || benchRows.length != 4) {
+      starterRows = sorted.take(11).toList();
+      benchRows = sorted.skip(11).take(4).toList();
+    }
 
     // Group starters: GK, DEF, MID, FWD
     final startingXi = starterRows.map((r) => candidateMap[r.fplId]!).toList()
@@ -248,23 +260,27 @@ class LineupNotifier extends StateNotifier<LineupState> {
         isQuickMode: recommendedLineup.isQuickModeFallback,
       );
 
-      // Persist to Drift database
-      final db = _ref.read(appDatabaseProvider);
-      final gw = squadState.nextGameweek?.id ?? squadState.currentGameweek?.id ?? 1;
+      // Persist to Drift database in background (isolated so it never blocks UI state)
+      try {
+        final db = _ref.read(appDatabaseProvider);
+        final gw = squadState.nextGameweek?.id ?? squadState.currentGameweek?.id ?? 1;
 
-      await db.into(db.lineupResultsTable).insertOnConflictUpdate(
-            LineupResultsTableCompanion(
-              gameweek: drift.Value(gw),
-              starting11FplIds: drift.Value(active.startingXi.map((p) => p.fplId).join(',')),
-              benchFplIds: drift.Value(active.bench.map((p) => p.fplId).join(',')),
-              captainFplId: drift.Value(active.captain.fplId),
-              viceCaptainFplId: drift.Value(active.viceCaptain.fplId),
-              projectedTotalPoints: drift.Value(active.totalExpectedPoints),
-              modelVersion: const drift.Value('v1.5'),
-              projectionRunId: drift.Value('run_${DateTime.now().millisecondsSinceEpoch}'),
-              computedAt: drift.Value(DateTime.now()),
-            ),
-          );
+        await db.into(db.lineupResultsTable).insertOnConflictUpdate(
+              LineupResultsTableCompanion(
+                gameweek: drift.Value(gw),
+                starting11FplIds: drift.Value(active.startingXi.map((p) => p.fplId).join(',')),
+                benchFplIds: drift.Value(active.bench.map((p) => p.fplId).join(',')),
+                captainFplId: drift.Value(active.captain.fplId),
+                viceCaptainFplId: drift.Value(active.viceCaptain.fplId),
+                projectedTotalPoints: drift.Value(active.totalExpectedPoints),
+                modelVersion: const drift.Value('v1.5'),
+                projectionRunId: drift.Value('run_${DateTime.now().millisecondsSinceEpoch}'),
+                computedAt: drift.Value(DateTime.now()),
+              ),
+            );
+      } catch (_) {
+        // Cache write failure should not prevent lineup display
+      }
     } catch (e) {
       state = state.copyWith(
         isOptimizing: false,

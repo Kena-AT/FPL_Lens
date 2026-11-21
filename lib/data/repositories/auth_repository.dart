@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/error_mapper.dart';
@@ -34,6 +35,7 @@ class AuthRepository {
 
       apiClient.setAccessToken(accessToken);
       await secureStore.saveRefreshToken(refreshToken);
+      await secureStore.saveLastActiveAt(DateTime.now());
 
       return await getProfile();
     } catch (e) {
@@ -82,6 +84,7 @@ class AuthRepository {
 
       apiClient.setAccessToken(accessToken);
       await secureStore.saveRefreshToken(refreshToken);
+      await secureStore.saveLastActiveAt(DateTime.now());
 
       return await getProfile();
     } catch (e) {
@@ -116,6 +119,7 @@ class AuthRepository {
 
       apiClient.setAccessToken(accessToken);
       await secureStore.saveRefreshToken(refreshToken);
+      await secureStore.saveLastActiveAt(DateTime.now());
 
       return await getProfile();
     } catch (e) {
@@ -131,6 +135,8 @@ class AuthRepository {
         await secureStore.saveFplTeamId(user.fplTeamId!);
       }
       await secureStore.saveUserId(user.id);
+      await secureStore.saveCachedUser(jsonEncode(user.toJson()));
+      await secureStore.saveLastActiveAt(DateTime.now());
       return user;
     } catch (e) {
       throw ErrorMapper.fromException(e);

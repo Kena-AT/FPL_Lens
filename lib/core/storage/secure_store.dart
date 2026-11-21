@@ -9,6 +9,8 @@ class SecureStore {
   static const String _keyRefreshToken = 'fpl_refresh_token';
   static const String _keyUserId = 'fpl_user_id';
   static const String _keyFplTeamId = 'fpl_team_id';
+  static const String _keyLastActiveAt = 'fpl_last_active_at';
+  static const String _keyCachedUser = 'fpl_cached_user';
 
   static const String _keyAiProvider = 'fpl_ai_provider';
   static const String _keyAiKey = 'fpl_ai_key';
@@ -48,6 +50,36 @@ class SecureStore {
     final val = await _storage.read(key: _keyFplTeamId);
     if (val == null) return null;
     return int.tryParse(val);
+  }
+
+  // --- Session & 7-Day Inactivity Tracking ---
+
+  Future<void> saveLastActiveAt(DateTime dt) async {
+    await _storage.write(key: _keyLastActiveAt, value: dt.toIso8601String());
+  }
+
+  Future<DateTime?> getLastActiveAt() async {
+    final val = await _storage.read(key: _keyLastActiveAt);
+    if (val == null) return null;
+    return DateTime.tryParse(val);
+  }
+
+  Future<void> saveCachedUser(String userJson) async {
+    await _storage.write(key: _keyCachedUser, value: userJson);
+  }
+
+  Future<String?> getCachedUserJson() async {
+    return await _storage.read(key: _keyCachedUser);
+  }
+
+  Future<void> deleteCachedUser() async {
+    await _storage.delete(key: _keyCachedUser);
+  }
+
+  Future<void> deleteSession() async {
+    await _storage.delete(key: _keyRefreshToken);
+    await _storage.delete(key: _keyCachedUser);
+    await _storage.delete(key: _keyLastActiveAt);
   }
 
   // --- AI Key Storage (Sprint 11) ---

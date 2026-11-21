@@ -97,7 +97,7 @@ class Settings(BaseSettings):
     JWT_ISSUER: str = Field(default="fpl-lens-api", validation_alias="JWT_ISSUER")
     JWT_AUDIENCE: str = Field(default="fpl-lens-client", validation_alias="JWT_AUDIENCE")
     ACCESS_TOKEN_TTL_SECONDS: int = Field(default=900, validation_alias="ACCESS_TOKEN_TTL_SECONDS")
-    REFRESH_TOKEN_TTL_DAYS: int = Field(default=30, validation_alias="REFRESH_TOKEN_TTL_DAYS")
+    REFRESH_TOKEN_TTL_DAYS: int = Field(default=7, validation_alias="REFRESH_TOKEN_TTL_DAYS")
 
     # Google Auth
     GOOGLE_ANDROID_CLIENT_ID: str | None = Field(
