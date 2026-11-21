@@ -82,6 +82,15 @@ class AppColors extends ThemeExtension<AppColors> {
     return Theme.of(context).extension<AppColors>() ?? dark;
   }
 
+  /// Whether this color palette corresponds to dark mode.
+  bool get isDark => bgBase.computeLuminance() < 0.5;
+
+  /// Glass background fill per §4.4 (70% opacity bgSurface).
+  Color get bgGlass => bgSurface.withValues(alpha: 0.70);
+
+  /// Glass edge border per §4.4 (1dp, white at 12% in dark, black at 8% in light).
+  Color get borderGlass => isDark ? const Color(0x1FFFFFFF) : const Color(0x14000000);
+
   @override
   AppColors copyWith({
     Color? bgBase,

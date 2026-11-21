@@ -8,8 +8,73 @@ enum ThemeTestVariant {
   textScale200,
 }
 
-/// Test harness for verifying widgets across Light, Dark, and 200% text scale variants
-/// per Visual Redesign Design Document §12 & §16 (Sprint R1).
+/// Test harness helper class for Sprint R1/R2 widget testing across
+/// Light, Dark, and 200% text scale variants.
+abstract final class ThemeTestHarness {
+  static Widget dark({
+    required Widget child,
+    MediaQueryData? mediaQueryData,
+    List<Override> overrides = const [],
+  }) {
+    return ProviderScope(
+      overrides: overrides,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.dark,
+        home: MediaQuery(
+          data: mediaQueryData ?? const MediaQueryData(size: Size(360, 800)),
+          child: Scaffold(body: child),
+        ),
+      ),
+    );
+  }
+
+  static Widget light({
+    required Widget child,
+    MediaQueryData? mediaQueryData,
+    List<Override> overrides = const [],
+  }) {
+    return ProviderScope(
+      overrides: overrides,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.light,
+        home: MediaQuery(
+          data: mediaQueryData ?? const MediaQueryData(size: Size(360, 800)),
+          child: Scaffold(body: child),
+        ),
+      ),
+    );
+  }
+
+  static Widget scale200({
+    required Widget child,
+    List<Override> overrides = const [],
+  }) {
+    return ProviderScope(
+      overrides: overrides,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.dark,
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(360, 800),
+            textScaler: TextScaler.linear(2.0),
+          ),
+          child: Scaffold(body: child),
+        ),
+      ),
+    );
+  }
+}
+
+/// Legacy helper for verifying widgets across Light, Dark, and 200% text scale variants.
 Widget buildThemedTestWidget({
   required Widget child,
   ThemeTestVariant variant = ThemeTestVariant.dark,

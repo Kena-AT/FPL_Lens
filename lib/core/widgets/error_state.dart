@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../network/error_mapper.dart';
-import '../theme/tokens.dart';
+import '../theme/app_colors.dart';
 import '../theme/text_styles.dart';
+import '../theme/tokens.dart';
 import 'app_button.dart';
 
+/// ErrorState per Visual Redesign Design Document §5 C15 & §16.
 class ErrorState extends StatelessWidget {
   final AppError error;
   final VoidCallback? onRetry;
@@ -20,6 +22,8 @@ class ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     IconData icon;
     switch (error.kind) {
       case AppErrorKind.offline:
@@ -46,7 +50,7 @@ class ErrorState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 48.0, color: AppTokens.statusOut),
+            Icon(icon, size: 48.0, color: colors.statusError),
             const SizedBox(height: AppTokens.space16),
             Text(
               error.kind == AppErrorKind.offline
@@ -54,13 +58,16 @@ class ErrorState extends StatelessWidget {
                   : error.kind == AppErrorKind.fplUnavailable
                       ? "FPL unavailable"
                       : "Something went wrong",
-              style: AppTextStyles.headline,
+              style: AppTextStyles.title.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppTokens.space8),
             Text(
               error.message,
-              style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
+              style: AppTextStyles.body.copyWith(color: colors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppTokens.space24),

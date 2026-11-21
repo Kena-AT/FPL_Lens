@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../theme/text_styles.dart';
 import '../theme/tokens.dart';
 
@@ -6,7 +7,8 @@ enum AvailabilityVariant {
   fit,
   doubtful,
   injured,
-  suspended;
+  suspended,
+  unknown;
 
   static AvailabilityVariant fromFplStatus(String? status) {
     if (status == null) return AvailabilityVariant.fit;
@@ -21,20 +23,25 @@ enum AvailabilityVariant {
       case 'n':
         return AvailabilityVariant.injured;
       case 'a':
+        return AvailabilityVariant.fit;
       default:
         return AvailabilityVariant.fit;
     }
   }
 }
 
-/// D10 AvailabilityBadge per Frontend Implementation Plan §D10.
-/// Displays status dot + icon + text badge. Never relies on colour alone.
+/// AvailabilityBadge per Visual Redesign Design Document §6.1 & §16.
+///
+/// Refactored from bulky pill to subtle 6dp dot + icon + label.
+/// Never relies on colour alone.
 class AvailabilityBadge extends StatelessWidget {
   final AvailabilityVariant variant;
   final int? chanceOfPlaying;
   final String? news;
   final String? newsTimestamp;
   final bool showNews;
+  final bool compact;
+  final String? customLabel;
 
   const AvailabilityBadge({
     super.key,
@@ -43,6 +50,8 @@ class AvailabilityBadge extends StatelessWidget {
     this.news,
     this.newsTimestamp,
     this.showNews = false,
+    this.compact = false,
+    this.customLabel,
   });
 
   factory AvailabilityBadge.fromStatus({
@@ -52,6 +61,8 @@ class AvailabilityBadge extends StatelessWidget {
     String? news,
     String? newsTimestamp,
     bool showNews = false,
+    bool compact = false,
+    String? customLabel,
   }) {
     return AvailabilityBadge(
       key: key,
@@ -60,18 +71,22 @@ class AvailabilityBadge extends StatelessWidget {
       news: news,
       newsTimestamp: newsTimestamp,
       showNews: showNews,
+      compact: compact,
+      customLabel: customLabel,
     );
   }
 
-  Color get _statusColor {
+  Color _getColor(AppColors colors) {
     switch (variant) {
       case AvailabilityVariant.fit:
-        return AppTokens.statusAvailable;
+        return colors.statusOk;
       case AvailabilityVariant.doubtful:
-        return AppTokens.statusDoubtful;
+        return colors.statusWarn;
       case AvailabilityVariant.injured:
       case AvailabilityVariant.suspended:
-        return AppTokens.statusOut;
+        return colors.statusError;
+      case AvailabilityVariant.unknown:
+        return colors.textSecondary;
     }
   }
 
@@ -85,10 +100,13 @@ class AvailabilityBadge extends StatelessWidget {
         return Icons.cancel_rounded;
       case AvailabilityVariant.suspended:
         return Icons.block_rounded;
+      case AvailabilityVariant.unknown:
+        return Icons.help_outline_rounded;
     }
   }
 
   String get _label {
+    if (customLabel != null) return customLabel!;
     switch (variant) {
       case AvailabilityVariant.fit:
         return 'Fit';
@@ -101,31 +119,46 @@ class AvailabilityBadge extends StatelessWidget {
         return 'Injured';
       case AvailabilityVariant.suspended:
         return 'Suspended';
+      case AvailabilityVariant.unknown:
+        return 'No data';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _statusColor;
+    final colors = AppColors.of(context);
+    final color = _getColor(colors);
+
+    // Subtle 6dp dot with icon and text per §6.1 & §16
     final badge = Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTokens.space8,
-        vertical: AppTokens.space4,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? AppTokens.space4 : AppTokens.space8,
+        vertical: AppTokens.space2,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppTokens.radiusChip),
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppTokens.radiusPill),
         border: Border.all(
-          color: color.withValues(alpha: 0.5),
-          width: 1,
+          color: color.withValues(alpha: 0.25),
+          width: 1.0,
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 6dp status dot (§16 requirement)
+          Container(
+            width: 6.0,
+            height: 6.0,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: AppTokens.space4),
           Icon(
             _icon,
-            size: 14,
+            size: compact ? 12.0 : 14.0,
             color: color,
           ),
           const SizedBox(width: AppTokens.space4),
@@ -134,6 +167,7 @@ class AvailabilityBadge extends StatelessWidget {
             style: AppTextStyles.label.copyWith(
               color: color,
               fontWeight: FontWeight.w600,
+              fontSize: compact ? 11.0 : 12.0,
             ),
           ),
         ],
@@ -158,9 +192,9 @@ class AvailabilityBadge extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppTokens.space12),
             decoration: BoxDecoration(
-              color: AppTokens.bgElevated,
+              color: colors.bgElevated,
               borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-              border: Border.all(color: AppTokens.borderSubtle),
+              border: Border.all(color: colors.borderSubtle),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,7 +202,7 @@ class AvailabilityBadge extends StatelessWidget {
                 Text(
                   news!,
                   style: AppTextStyles.body.copyWith(
-                    color: AppTokens.textPrimary,
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: AppTokens.space4),
@@ -178,7 +212,7 @@ class AvailabilityBadge extends StatelessWidget {
                       Text(
                         newsTimestamp!,
                         style: AppTextStyles.caption.copyWith(
-                          color: AppTokens.textDisabled,
+                          color: colors.textDisabled,
                         ),
                       ),
                       const SizedBox(width: AppTokens.space8),
@@ -186,7 +220,7 @@ class AvailabilityBadge extends StatelessWidget {
                     Text(
                       'Source: FPL',
                       style: AppTextStyles.caption.copyWith(
-                        color: AppTokens.textDisabled,
+                        color: colors.textDisabled,
                       ),
                     ),
                   ],
