@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
@@ -96,6 +97,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   void handleSessionExpired() {
+    _secureStore.deleteSession();
     state = const AuthState(
       status: AuthStatus.unauthenticated,
       errorMessage: "Please sign in again.",
@@ -109,22 +111,113 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> checkSession() async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
     try {
-      final refreshToken = await _secureStore.getRefreshToken().timeout(
-        const Duration(seconds: 2),
-        onTimeout: () => null,
-      );
+      final refreshToken = await _secureStore.getRefreshToken();
       if (refreshToken == null || refreshToken.isEmpty) {
         state = const AuthState(status: AuthStatus.unauthenticated);
         return;
       }
 
-      final user = await _repository.getProfile().timeout(
-        const Duration(seconds: 3),
-      );
-      if (!user.isEmailVerified) {
-        state = AuthState(status: AuthStatus.authenticatedUnverified, user: user);
-      } else {
-        state = AuthState(status: AuthStatus.authenticatedVerified, user: user);
+      // Check 7-day inactivity expiration
+      final lastActive = await _secureStore.getLastActiveAt();
+      if (lastActive != null) {
+        final inactiveDuration = DateTime.now().difference(lastActive);
+        if (inactiveDuration.inDays >= 7) {
+          await _secureStore.deleteSession();
+          state = const AuthState(
+            status: AuthStatus.unauthenticated,
+            errorMessage: "Your session expired due to 7 days of inactivity. Please sign in again.",
+          );
+          return;
+        }
+      }
+
+      // Attempt immediate recovery from local cached user profile
+      final cachedUserJson = await _secureStore.getCachedUserJson();
+      UserModel? cachedUser;
+      if (cachedUserJson != null && cachedUserJson.isNotEmpty) {
+        try {
+          cachedUser = UserModel.fromJson(jsonDecode(cachedUserJson) as Map<String, dynamic>);
+        } catch (_) {}
+      }
+
+      if (cachedUser != null) {
+        // Immediately restore authenticated state so UI launches instantly without bouncing to login
+        if (!cachedUser.isEmailVerified) {
+          state = AuthState(status: AuthStatus.authenticatedUnverified, user: cachedUser);
+        } else {
+          state = AuthState(status: AuthStatus.authenticatedVerified, user: cachedUser);
+        }
+        await _secureStore.saveLastActiveAt(DateTime.now());
+
+        // Refresh profile in background / with a soft timeout
+        try {
+          final freshUser = await _repository.getProfile().timeout(const Duration(seconds: 5));
+          if (!freshUser.isEmailVerified) {
+            state = AuthState(status: AuthStatus.authenticatedUnverified, user: freshUser);
+          } else {
+            state = AuthState(status: AuthStatus.authenticatedVerified, user: freshUser);
+          }
+        } on AppError catch (e) {
+          if (e.kind == AppErrorKind.unauthenticated) {
+            await _secureStore.deleteSession();
+            state = const AuthState(
+              status: AuthStatus.unauthenticated,
+              errorMessage: "Session expired. Please sign in again.",
+            );
+          }
+          // Network errors or offline: retain cached authenticated state
+        } catch (_) {
+          // Network errors: retain cached authenticated state
+        }
+        return;
+      }
+
+      // No cached user available yet - fetch from server
+      try {
+        final user = await _repository.getProfile().timeout(const Duration(seconds: 5));
+        if (!user.isEmailVerified) {
+          state = AuthState(status: AuthStatus.authenticatedUnverified, user: user);
+        } else {
+          state = AuthState(status: AuthStatus.authenticatedVerified, user: user);
+        }
+      } on AppError catch (e) {
+        if (e.kind == AppErrorKind.unauthenticated) {
+          await _secureStore.deleteSession();
+          state = const AuthState(
+            status: AuthStatus.unauthenticated,
+            errorMessage: "Session expired. Please sign in again.",
+          );
+        } else {
+          final userId = await _secureStore.getUserId();
+          final teamId = await _secureStore.getFplTeamId();
+          if (userId != null && userId.isNotEmpty) {
+            final fallbackUser = UserModel(
+              id: userId,
+              email: '',
+              displayName: 'Manager',
+              fplTeamId: teamId,
+              status: 'active',
+            );
+            state = AuthState(status: AuthStatus.authenticatedVerified, user: fallbackUser);
+          } else {
+            state = const AuthState(status: AuthStatus.unauthenticated);
+          }
+        }
+      } catch (_) {
+        final userId = await _secureStore.getUserId();
+        final teamId = await _secureStore.getFplTeamId();
+        if (userId != null && userId.isNotEmpty) {
+          final fallbackUser = UserModel(
+            id: userId,
+            email: '',
+            displayName: 'Manager',
+            fplTeamId: teamId,
+            status: 'active',
+          );
+          state = AuthState(status: AuthStatus.authenticatedVerified, user: fallbackUser);
+        } else {
+          state = const AuthState(status: AuthStatus.unauthenticated);
+        }
       }
     } catch (_) {
       state = const AuthState(status: AuthStatus.unauthenticated);
@@ -278,6 +371,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       await _repository.deleteAccount();
     } finally {
+      await _secureStore.deleteSession();
       state = const AuthState(
         status: AuthStatus.unauthenticated,
         errorMessage: "Your account is scheduled for deletion. You can sign in again within 3 days to cancel.",
@@ -290,6 +384,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       await _repository.logout();
     } finally {
+      await _secureStore.deleteSession();
       state = const AuthState(status: AuthStatus.unauthenticated);
     }
   }

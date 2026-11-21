@@ -82,6 +82,7 @@ class AuthInterceptor extends QueuedInterceptor {
 
           accessToken = newAccessToken;
           await secureStore.saveRefreshToken(newRefreshToken);
+          await secureStore.saveLastActiveAt(DateTime.now());
 
           // Retry the original failed request with the new access token
           final requestOptions = err.requestOptions;
@@ -97,7 +98,10 @@ class AuthInterceptor extends QueuedInterceptor {
           return;
         }
       } catch (refreshErr) {
-        await _handleLogout();
+        // Only wipe session and log out if the server explicitly rejected the refresh token (401)
+        if (refreshErr is DioException && refreshErr.response?.statusCode == 401) {
+          await _handleLogout();
+        }
         handler.reject(err);
         return;
       } finally {
@@ -110,7 +114,7 @@ class AuthInterceptor extends QueuedInterceptor {
 
   Future<void> _handleLogout() async {
     accessToken = null;
-    await secureStore.deleteRefreshToken();
+    await secureStore.deleteSession();
     onUnauthenticated?.call();
   }
 }

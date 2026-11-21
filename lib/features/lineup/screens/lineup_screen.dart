@@ -24,6 +24,18 @@ class LineupScreen extends ConsumerStatefulWidget {
 class _LineupScreenState extends ConsumerState<LineupScreen> {
   PlayerCandidate? _selectedPlayer;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final lineupState = ref.read(lineupNotifierProvider);
+      final squadState = ref.read(squadNotifierProvider);
+      if (lineupState.result == null && squadState.squad.length == 15 && !lineupState.isOptimizing) {
+        ref.read(lineupNotifierProvider.notifier).optimize();
+      }
+    });
+  }
+
   void _showPlayerActionSheet(PlayerCandidate player, int gameweek) {
     showModalBottomSheet(
       context: context,
@@ -204,7 +216,20 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
             : 1);
     final selectedGw = lineupState.selectedGameweek ?? latestGw;
 
-    if (!squadState.hasSquad) {
+    if (!squadState.hasSquad || squadState.squad.length != 15) {
+      if (squadState.isLoading) {
+        return Scaffold(
+          backgroundColor: AppTokens.bgBase,
+          appBar: AppBar(
+            title: Text('Gameweek $selectedGw Lineup', style: AppTextStyles.headline),
+            backgroundColor: AppTokens.bgBase,
+            elevation: 0,
+          ),
+          body: const Center(
+            child: CircularProgressIndicator(color: AppTokens.neonPrimary),
+          ),
+        );
+      }
       return Scaffold(
         backgroundColor: AppTokens.bgBase,
         appBar: AppBar(
@@ -212,11 +237,17 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
           backgroundColor: AppTokens.bgBase,
           elevation: 0,
         ),
-        body: const Center(
+        body: Center(
           child: EmptyState(
             icon: Icons.groups_outlined,
-            title: 'No squad loaded',
-            body: 'Sync your squad to run the device optimiser.',
+            title: squadState.hasSquad
+                ? 'Incomplete squad (${squadState.squad.length}/15)'
+                : 'No squad loaded',
+            body: squadState.hasSquad
+                ? 'Your squad must contain exactly 15 players to view and optimize your lineup. Please sync your squad.'
+                : 'Sync your squad to run the device optimiser.',
+            actionLabel: 'Sync Squad',
+            onAction: () => ref.read(squadNotifierProvider.notifier).refreshSquad(force: true),
           ),
         ),
       );
@@ -282,11 +313,34 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
           ),
         ],
       ),
-      body: (result == null || lineupState.isLoadingGameweek)
+      body: (lineupState.isLoadingGameweek || (result == null && lineupState.isOptimizing))
           ? const Center(
               child: CircularProgressIndicator(color: AppTokens.neonPrimary),
             )
-          : RefreshIndicator(
+          : result == null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppTokens.screenGutter),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: AppTokens.statusOut),
+                        const SizedBox(height: AppTokens.space16),
+                        Text(
+                          lineupState.errorMessage ?? 'Could not calculate lineup.',
+                          style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppTokens.space24),
+                        AppButton(
+                          label: 'Calculate Lineup',
+                          onPressed: () => ref.read(lineupNotifierProvider.notifier).optimize(),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : RefreshIndicator(
               color: AppTokens.neonPrimary,
               backgroundColor: AppTokens.bgSurface,
               onRefresh: () async {
