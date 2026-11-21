@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/confirm_sheet.dart';
@@ -279,7 +280,79 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               value: user?.provider == 'google' ? 'Google' : 'Email',
             ),
 
-            // 2. Preferences Group
+            // 2. Appearance Group (§3.1, §8.17)
+            _buildGroupHeader('Appearance'),
+            Container(
+              margin: const EdgeInsets.only(bottom: AppTokens.space8),
+              padding: const EdgeInsets.all(AppTokens.space12),
+              decoration: BoxDecoration(
+                color: AppTokens.bgSurface,
+                borderRadius: BorderRadius.circular(AppTokens.radiusInput),
+                border: Border.all(color: AppTokens.borderSubtle, width: 1.0),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Theme mode', style: AppTextStyles.body.copyWith(fontSize: 14.0)),
+                  const SizedBox(height: AppTokens.space8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<ThemeMode>(
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text('Dark'),
+                          icon: Icon(Icons.dark_mode_outlined, size: 16),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text('Light'),
+                          icon: Icon(Icons.light_mode_outlined, size: 16),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          label: Text('System'),
+                          icon: Icon(Icons.brightness_auto_outlined, size: 16),
+                        ),
+                      ],
+                      selected: {ref.watch(themeModeProvider)},
+                      onSelectionChanged: (modes) {
+                        ref.read(themeModeProvider.notifier).setThemeMode(modes.first);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(bottom: AppTokens.space4),
+              decoration: BoxDecoration(
+                color: AppTokens.bgSurface,
+                borderRadius: BorderRadius.circular(AppTokens.radiusInput),
+                border: Border.all(color: AppTokens.borderSubtle, width: 1.0),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(AppTokens.radiusInput),
+                child: SwitchListTile(
+                  title: Text(
+                    'Reduce motion',
+                    style: AppTextStyles.body.copyWith(fontSize: 14.0),
+                  ),
+                  subtitle: Text(
+                    'Turns off reveals and counting animations.',
+                    style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+                  ),
+                  value: ref.watch(motionPolicyProvider),
+                  activeThumbColor: AppTokens.accent,
+                  onChanged: (val) {
+                    ref.read(motionPolicyProvider.notifier).setReduceMotion(val);
+                  },
+                ),
+              ),
+            ),
+
+            // 3. Preferences Group
             _buildGroupHeader('Preferences'),
             _buildTile(
               title: 'Notifications',

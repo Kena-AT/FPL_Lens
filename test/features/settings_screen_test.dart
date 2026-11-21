@@ -134,6 +134,8 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Theme mode'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Share anonymous usage data'), 200);
       expect(find.text('Share anonymous usage data'), findsOneWidget);
     });
 

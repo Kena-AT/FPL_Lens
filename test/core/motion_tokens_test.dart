@@ -3,39 +3,39 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fpl_lens/core/theme/tokens.dart';
 
 void main() {
-  group('Part I Motion Tokens Audit', () {
-    test('Enforces exact duration values per Part I', () {
-      expect(AppTokens.motionMicro, const Duration(milliseconds: 150));
-      expect(AppTokens.motionScreen, const Duration(milliseconds: 250));
-      expect(AppTokens.motionPitch, const Duration(milliseconds: 400));
-      expect(AppTokens.motionSwap, const Duration(milliseconds: 200));
+  group('Part I Motion Tokens Audit (Visual Redesign §4.2)', () {
+    test('Enforces exact duration values per redesign spec §4.2', () {
+      expect(AppTokens.motionInstant, Duration.zero);
+      expect(AppTokens.motionFast, const Duration(milliseconds: 120));
+      expect(AppTokens.motionBase, const Duration(milliseconds: 200));
+      expect(AppTokens.motionSlow, const Duration(milliseconds: 320));
+      expect(AppTokens.motionMicro, const Duration(milliseconds: 120));
     });
 
     testWidgets('AppTokens.motion returns normal duration when animations enabled', (tester) async {
-      late Duration effectiveMicro;
-      late Duration effectiveScreen;
+      late Duration effectiveFast;
+      late Duration effectiveBase;
 
       await tester.pumpWidget(
         MaterialApp(
           home: Builder(
             builder: (context) {
-              effectiveMicro = AppTokens.motion(context, AppTokens.motionMicro);
-              effectiveScreen = AppTokens.motion(context, AppTokens.motionScreen);
+              effectiveFast = AppTokens.motion(context, AppTokens.motionFast);
+              effectiveBase = AppTokens.motion(context, AppTokens.motionBase);
               return const SizedBox();
             },
           ),
         ),
       );
 
-      expect(effectiveMicro, const Duration(milliseconds: 150));
-      expect(effectiveScreen, const Duration(milliseconds: 250));
+      expect(effectiveFast, const Duration(milliseconds: 120));
+      expect(effectiveBase, const Duration(milliseconds: 200));
     });
 
     testWidgets('AppTokens.motion returns Duration.zero when MediaQuery.disableAnimations is true', (tester) async {
-      late Duration effectiveMicro;
-      late Duration effectiveScreen;
-      late Duration effectivePitch;
-      late Duration effectiveSwap;
+      late Duration effectiveFast;
+      late Duration effectiveBase;
+      late Duration effectiveSlow;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -43,10 +43,9 @@ void main() {
             data: const MediaQueryData(disableAnimations: true),
             child: Builder(
               builder: (context) {
-                effectiveMicro = AppTokens.motion(context, AppTokens.motionMicro);
-                effectiveScreen = AppTokens.motion(context, AppTokens.motionScreen);
-                effectivePitch = AppTokens.motion(context, AppTokens.motionPitch);
-                effectiveSwap = AppTokens.motion(context, AppTokens.motionSwap);
+                effectiveFast = AppTokens.motion(context, AppTokens.motionFast);
+                effectiveBase = AppTokens.motion(context, AppTokens.motionBase);
+                effectiveSlow = AppTokens.motion(context, AppTokens.motionSlow);
                 return const SizedBox();
               },
             ),
@@ -54,10 +53,9 @@ void main() {
         ),
       );
 
-      expect(effectiveMicro, Duration.zero);
-      expect(effectiveScreen, Duration.zero);
-      expect(effectivePitch, Duration.zero);
-      expect(effectiveSwap, Duration.zero);
+      expect(effectiveFast, Duration.zero);
+      expect(effectiveBase, Duration.zero);
+      expect(effectiveSlow, Duration.zero);
     });
   });
 }
