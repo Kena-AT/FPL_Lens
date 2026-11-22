@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../optimiser/player_candidate.dart';
+import '../theme/app_colors.dart';
 import '../theme/text_styles.dart';
 import '../theme/tokens.dart';
 import 'player_chip.dart';
 
-/// Component D8: BenchStrip (Frontend Implementation Plan §4.1, Spec §5.3).
+/// Component D8: BenchStrip (Frontend Implementation Plan §4.1, Spec §5.3 & Visual Redesign §8.9).
 /// Displays the 4 substitutes in exact substitution order (GK, 1, 2, 3).
 class BenchStrip extends StatelessWidget {
   final List<PlayerCandidate> benchPlayers; // Expected length: 4
@@ -22,6 +23,8 @@ class BenchStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppTokens.screenGutter,
@@ -32,9 +35,9 @@ class BenchStrip extends StatelessWidget {
         vertical: AppTokens.space12,
       ),
       decoration: BoxDecoration(
-        color: AppTokens.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-        border: Border.all(color: AppTokens.borderSubtle, width: 1.0),
+        border: Border.all(color: colors.borderSubtle, width: 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,7 +50,7 @@ class BenchStrip extends StatelessWidget {
                 child: Text(
                   'BENCH (SUBSTITUTION ORDER)',
                   style: AppTextStyles.label.copyWith(
-                    color: AppTokens.textSecondary,
+                    color: colors.textSecondary,
                     letterSpacing: 0.8,
                     fontWeight: FontWeight.w700,
                     fontSize: 10.5,
@@ -56,10 +59,10 @@ class BenchStrip extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8.0),
-              const Icon(
+              Icon(
                 Icons.swap_vert_rounded,
                 size: 16.0,
-                color: AppTokens.textSecondary,
+                color: colors.textSecondary,
               ),
             ],
           ),
@@ -78,20 +81,20 @@ class BenchStrip extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 4.0),
                     decoration: BoxDecoration(
                       color: index == 0
-                          ? AppTokens.goldPrimary.withValues(alpha: 0.15)
-                          : AppTokens.bgElevated,
+                          ? colors.accent.withValues(alpha: 0.15)
+                          : colors.bgElevated,
                       borderRadius: BorderRadius.circular(4.0),
                       border: Border.all(
                         color: index == 0
-                            ? AppTokens.goldPrimary.withValues(alpha: 0.4)
-                            : AppTokens.borderSubtle,
+                            ? colors.accent.withValues(alpha: 0.5)
+                            : colors.borderSubtle,
                         width: 0.8,
                       ),
                     ),
                     child: Text(
                       slotLabel,
                       style: TextStyle(
-                        color: index == 0 ? AppTokens.goldPrimary : AppTokens.textSecondary,
+                        color: index == 0 ? colors.accent : colors.textSecondary,
                         fontSize: 9.0,
                         fontWeight: FontWeight.w700,
                       ),
@@ -109,15 +112,15 @@ class BenchStrip extends StatelessWidget {
                       width: 72.0,
                       height: 80.0,
                       decoration: BoxDecoration(
-                        color: AppTokens.bgElevated.withValues(alpha: 0.5),
+                        color: colors.bgElevated.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(AppTokens.radiusChip),
-                        border: Border.all(color: AppTokens.borderSubtle, width: 1.0),
+                        border: Border.all(color: colors.borderSubtle, width: 1.0),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
                           'Empty',
                           style: TextStyle(
-                            color: AppTokens.textDisabled,
+                            color: colors.textDisabled,
                             fontSize: 10.0,
                           ),
                         ),

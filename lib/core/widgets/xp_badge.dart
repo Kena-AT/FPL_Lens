@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/tokens.dart';
+import '../theme/app_colors.dart';
 
 /// Component D9: XpBadge (Spec §5, Frontend Implementation Plan §4.1).
 /// Displays deterministic expected points with clear aesthetic styling.
@@ -19,22 +19,24 @@ class XpBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Curated aesthetic tint based on xP range
+    final colors = AppColors.of(context);
+
+    // Curated aesthetic tint based on xP range (Visual Redesign §4.1 & §8.9)
     Color badgeColor;
     Color textColor;
 
     if (xp >= 6.0) {
-      badgeColor = AppTokens.statusAvailable.withValues(alpha: 0.15);
-      textColor = AppTokens.statusAvailable;
+      badgeColor = colors.statusOk.withValues(alpha: 0.15);
+      textColor = colors.statusOk;
     } else if (xp >= 4.0) {
-      badgeColor = AppTokens.goldPrimary.withValues(alpha: 0.15);
-      textColor = AppTokens.goldPrimary;
+      badgeColor = colors.accent.withValues(alpha: 0.15);
+      textColor = colors.accent;
     } else if (xp >= 2.0) {
-      badgeColor = AppTokens.statusDoubtful.withValues(alpha: 0.15);
-      textColor = AppTokens.statusDoubtful;
+      badgeColor = colors.statusWarn.withValues(alpha: 0.15);
+      textColor = colors.statusWarn;
     } else {
-      badgeColor = AppTokens.statusOut.withValues(alpha: 0.15);
-      textColor = AppTokens.statusOut;
+      badgeColor = colors.statusError.withValues(alpha: 0.15);
+      textColor = colors.statusError;
     }
 
     final displayText = showLabel

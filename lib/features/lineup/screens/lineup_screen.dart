@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/optimiser/player_candidate.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
@@ -12,8 +13,9 @@ import '../../../core/widgets/pitch_view.dart';
 import '../../squad/providers/squad_provider.dart';
 import '../providers/lineup_provider.dart';
 
-/// Screen P10: LineupScreen (Spec §5, Frontend Implementation Plan §3).
-/// Displays optimized starting XI, captain, and ordered bench.
+/// Screen P10: LineupScreen (Spec §5, Frontend Implementation Plan §3, Visual Redesign §8.9).
+/// Displays optimized starting XI on tactical pitch, captaincy controls, and ordered bench.
+/// Built with tokens from AppColors, supporting 200% text scale and reduced motion.
 class LineupScreen extends ConsumerStatefulWidget {
   const LineupScreen({super.key});
 
@@ -36,10 +38,10 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
     });
   }
 
-  void _showPlayerActionSheet(PlayerCandidate player, int gameweek) {
+  void _showPlayerActionSheet(PlayerCandidate player, int gameweek, AppColors colors) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTokens.bgSurface,
+      backgroundColor: colors.bgSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusSheet)),
       ),
@@ -61,30 +63,30 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                       height: 4.0,
                       margin: const EdgeInsets.only(bottom: 12.0),
                       decoration: BoxDecoration(
-                        color: AppTokens.borderSubtle,
+                        color: colors.borderSubtle,
                         borderRadius: BorderRadius.circular(2.0),
                       ),
                     ),
                   ),
                   Text(
                     player.webName,
-                    style: AppTextStyles.headline.copyWith(color: AppTokens.textPrimary),
+                    style: AppTextStyles.headline.copyWith(color: colors.textPrimary),
                     textAlign: TextAlign.center,
                   ),
                   Text(
                     '${player.position} • ${(player.priceTenths / 10.0).toStringAsFixed(1)}m • ${player.xp} xP',
-                    style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+                    style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 14.0),
 
-                  // xP Attribution & Mathematical Breakdown Card
+                  // xP Attribution & Mathematical Breakdown Card (§8.9 & §8.12)
                   Container(
                     padding: const EdgeInsets.all(AppTokens.space12),
                     decoration: BoxDecoration(
-                      color: AppTokens.bgElevated,
+                      color: colors.bgElevated,
                       borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                      border: Border.all(color: AppTokens.borderSubtle),
+                      border: Border.all(color: colors.borderSubtle),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,7 +97,7 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                             Text(
                               'xP CALCULATION EXPLANATION',
                               style: AppTextStyles.label.copyWith(
-                                color: AppTokens.goldPrimary,
+                                color: colors.accent,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.6,
                               ),
@@ -103,24 +105,26 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                             Text(
                               '${player.xp} xP',
                               style: AppTextStyles.numeric.copyWith(
-                                color: AppTokens.goldPrimary,
+                                color: colors.accent,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8.0),
-                        _buildAttributionRow('Start Probability', '$pStartPct% expected starting chance'),
-                        _buildAttributionRow('Expected Minutes', '~$expectedMins mins expected'),
+                        _buildAttributionRow('Start Probability', '$pStartPct% expected starting chance', colors),
+                        _buildAttributionRow('Expected Minutes', '~$expectedMins mins expected', colors),
                         _buildAttributionRow(
                           'Scoring Profile',
                           player.position == 'GK' || player.position == 'DEF'
                               ? 'Clean sheet potential (4 pts) + defensive baseline'
                               : 'Attacking returns (goals & assists threat)',
+                          colors,
                         ),
                         _buildAttributionRow(
                           'Deterministic Basis',
                           'Based on form, FDR fixture rating & underlying team stats',
+                          colors,
                         ),
                       ],
                     ),
@@ -131,9 +135,12 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                   Material(
                     color: Colors.transparent,
                     child: ListTile(
-                      leading: const Icon(Icons.grid_on_rounded, color: AppTokens.goldPrimary),
-                      title: const Text('View Fixture Heatmap', style: TextStyle(color: AppTokens.textPrimary)),
-                      subtitle: const Text('See 5-GW difficulty matrix & fixture swings', style: TextStyle(color: AppTokens.textSecondary, fontSize: 11)),
+                      leading: Icon(Icons.grid_on_rounded, color: colors.accent),
+                      title: Text('View Fixture Heatmap', style: TextStyle(color: colors.textPrimary)),
+                      subtitle: Text(
+                        'See 5-GW difficulty matrix & fixture swings',
+                        style: TextStyle(color: colors.textSecondary, fontSize: 11),
+                      ),
                       onTap: () {
                         Navigator.of(context).pop();
                         context.push('/heatmap');
@@ -143,8 +150,8 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                   Material(
                     color: Colors.transparent,
                     child: ListTile(
-                      leading: const Icon(Icons.star_rounded, color: AppTokens.goldPrimary),
-                      title: const Text('Make Captain', style: TextStyle(color: AppTokens.textPrimary)),
+                      leading: Icon(Icons.star_rounded, color: colors.accent),
+                      title: Text('Make Captain', style: TextStyle(color: colors.textPrimary)),
                       onTap: () {
                         ref.read(lineupNotifierProvider.notifier).setManualCaptain(player.fplId);
                         Navigator.of(context).pop();
@@ -154,8 +161,8 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                   Material(
                     color: Colors.transparent,
                     child: ListTile(
-                      leading: const Icon(Icons.star_half_rounded, color: AppTokens.textSecondary),
-                      title: const Text('Make Vice-Captain', style: TextStyle(color: AppTokens.textPrimary)),
+                      leading: Icon(Icons.star_half_rounded, color: colors.textSecondary),
+                      title: Text('Make Vice-Captain', style: TextStyle(color: colors.textPrimary)),
                       onTap: () {
                         ref.read(lineupNotifierProvider.notifier).setManualViceCaptain(player.fplId);
                         Navigator.of(context).pop();
@@ -165,8 +172,8 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                   Material(
                     color: Colors.transparent,
                     child: ListTile(
-                      leading: const Icon(Icons.restore_rounded, color: AppTokens.statusOut),
-                      title: const Text('Clear Manual Overrides', style: TextStyle(color: AppTokens.statusOut)),
+                      leading: Icon(Icons.restore_rounded, color: colors.statusError),
+                      title: Text('Clear Manual Overrides', style: TextStyle(color: colors.statusError)),
                       onTap: () {
                         ref.read(lineupNotifierProvider.notifier).clearOverrides();
                         Navigator.of(context).pop();
@@ -182,19 +189,19 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
     );
   }
 
-  static Widget _buildAttributionRow(String label, String value) {
+  static Widget _buildAttributionRow(String label, String value, AppColors colors) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('• ', style: TextStyle(color: AppTokens.goldPrimary, fontSize: 12)),
+          Text('• ', style: TextStyle(color: colors.accent, fontSize: 12)),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary, fontSize: 11.5),
+                style: AppTextStyles.caption.copyWith(color: colors.textSecondary, fontSize: 11.5),
                 children: [
-                  TextSpan(text: '$label: ', style: const TextStyle(color: AppTokens.textPrimary, fontWeight: FontWeight.w600)),
+                  TextSpan(text: '$label: ', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600)),
                   TextSpan(text: value),
                 ],
               ),
@@ -207,6 +214,7 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final lineupState = ref.watch(lineupNotifierProvider);
     final squadState = ref.watch(squadNotifierProvider);
     final latestGw = squadState.nextGameweek?.id ??
@@ -215,26 +223,33 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
             ? squadState.gameweekHistory.map((g) => g.gameweek).reduce((a, b) => a > b ? a : b)
             : 1);
     final selectedGw = lineupState.selectedGameweek ?? latestGw;
+    final maxGw = selectedGw > latestGw ? selectedGw : latestGw;
 
     if (!squadState.hasSquad || squadState.squad.length != 15) {
       if (squadState.isLoading) {
         return Scaffold(
-          backgroundColor: AppTokens.bgBase,
+          backgroundColor: colors.bgBase,
           appBar: AppBar(
-            title: Text('Gameweek $selectedGw Lineup', style: AppTextStyles.headline),
-            backgroundColor: AppTokens.bgBase,
+            title: Text(
+              'Gameweek $selectedGw Lineup',
+              style: AppTextStyles.headline.copyWith(color: colors.textPrimary),
+            ),
+            backgroundColor: colors.bgBase,
             elevation: 0,
           ),
-          body: const Center(
-            child: CircularProgressIndicator(color: AppTokens.neonPrimary),
+          body: Center(
+            child: CircularProgressIndicator(color: colors.accent),
           ),
         );
       }
       return Scaffold(
-        backgroundColor: AppTokens.bgBase,
+        backgroundColor: colors.bgBase,
         appBar: AppBar(
-          title: Text('Gameweek $selectedGw Lineup', style: AppTextStyles.headline),
-          backgroundColor: AppTokens.bgBase,
+          title: Text(
+            'Gameweek $selectedGw Lineup',
+            style: AppTextStyles.headline.copyWith(color: colors.textPrimary),
+          ),
+          backgroundColor: colors.bgBase,
           elevation: 0,
         ),
         body: Center(
@@ -256,22 +271,27 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
     final result = lineupState.result;
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
         title: DropdownButtonHideUnderline(
           child: DropdownButton<int>(
+            isExpanded: true,
             value: selectedGw,
-            dropdownColor: AppTokens.bgElevated,
-            icon: const Icon(Icons.arrow_drop_down_rounded, color: AppTokens.goldPrimary, size: 28),
+            dropdownColor: colors.bgElevated,
+            icon: Icon(Icons.arrow_drop_down_rounded, color: colors.accent, size: 28),
             items: [
-              for (int w = latestGw; w >= 1; w--)
+              for (int w = maxGw; w >= 1; w--)
                 DropdownMenuItem<int>(
                   value: w,
-                  child: Text(
-                    w == latestGw ? 'Gameweek $w (Latest)' : 'Gameweek $w',
-                    style: AppTextStyles.headline.copyWith(
-                      fontSize: 16.0,
-                      color: w == selectedGw ? AppTokens.goldPrimary : AppTokens.textPrimary,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      w == latestGw ? 'Gameweek $w (Latest)' : 'Gameweek $w',
+                      style: AppTextStyles.headline.copyWith(
+                        fontSize: 16.0,
+                        color: w == selectedGw ? colors.accent : colors.textPrimary,
+                      ),
                     ),
                   ),
                 ),
@@ -283,22 +303,22 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
             },
           ),
         ),
-        backgroundColor: AppTokens.bgBase,
+        backgroundColor: colors.bgBase,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.grid_on_rounded, color: AppTokens.goldPrimary),
+            icon: Icon(Icons.grid_on_rounded, color: colors.textPrimary),
             tooltip: 'Fixture Heatmap',
             onPressed: () => context.push('/heatmap'),
           ),
           IconButton(
             icon: (lineupState.isOptimizing || lineupState.isLoadingGameweek)
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20.0,
                     height: 20.0,
-                    child: CircularProgressIndicator(strokeWidth: 2.0, color: AppTokens.neonPrimary),
+                    child: CircularProgressIndicator(strokeWidth: 2.0, color: colors.accent),
                   )
-                : const Icon(Icons.refresh_rounded, color: AppTokens.neonPrimary),
+                : Icon(Icons.refresh_rounded, color: colors.accent),
             tooltip: 'Refresh Lineup',
             onPressed: (lineupState.isOptimizing || lineupState.isLoadingGameweek)
                 ? null
@@ -314,8 +334,8 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
         ],
       ),
       body: (lineupState.isLoadingGameweek || (result == null && lineupState.isOptimizing))
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTokens.neonPrimary),
+          ? Center(
+              child: CircularProgressIndicator(color: colors.accent),
             )
           : result == null
               ? Center(
@@ -324,11 +344,11 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 48, color: AppTokens.statusOut),
+                        Icon(Icons.error_outline, size: 48, color: colors.statusError),
                         const SizedBox(height: AppTokens.space16),
                         Text(
                           lineupState.errorMessage ?? 'Could not calculate lineup.',
-                          style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
+                          style: AppTextStyles.body.copyWith(color: colors.textSecondary),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: AppTokens.space24),
@@ -341,267 +361,287 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                   ),
                 )
               : RefreshIndicator(
-              color: AppTokens.neonPrimary,
-              backgroundColor: AppTokens.bgSurface,
-              onRefresh: () async {
-                if (selectedGw == latestGw) {
-                  await ref.read(squadNotifierProvider.notifier).refreshSquad(force: true);
-                  await ref.read(lineupNotifierProvider.notifier).optimize();
-                } else {
-                  await ref.read(lineupNotifierProvider.notifier).selectGameweek(selectedGw);
-                }
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (selectedGw == latestGw) ...[
-                      // Switcher between My Lineup and Recommended
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppTokens.screenGutter,
-                          AppTokens.space8,
-                          AppTokens.screenGutter,
-                          0,
-                        ),
-                        child: SegmentedButton<bool>(
-                          segments: const [
-                            ButtonSegment<bool>(
-                              value: false,
-                              label: Text('My Lineup'),
-                              icon: Icon(Icons.person_pin_circle_outlined, size: 16),
+                  color: colors.accent,
+                  backgroundColor: colors.bgSurface,
+                  onRefresh: () async {
+                    if (selectedGw == latestGw) {
+                      await ref.read(squadNotifierProvider.notifier).refreshSquad(force: true);
+                      await ref.read(lineupNotifierProvider.notifier).optimize();
+                    } else {
+                      await ref.read(lineupNotifierProvider.notifier).selectGameweek(selectedGw);
+                    }
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (selectedGw == latestGw) ...[
+                          // Switcher between My Lineup and Recommended
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppTokens.screenGutter,
+                              AppTokens.space8,
+                              AppTokens.screenGutter,
+                              0,
                             ),
-                            ButtonSegment<bool>(
-                              value: true,
-                              label: Text('Recommended'),
-                              icon: Icon(Icons.auto_awesome_outlined, size: 16),
-                            ),
-                          ],
-                          selected: {lineupState.isRecommendedMode},
-                          onSelectionChanged: (val) {
-                            ref.read(lineupNotifierProvider.notifier).setRecommendedMode(val.first);
-                          },
-                          style: ButtonStyle(
-                            visualDensity: VisualDensity.compact,
-                            backgroundColor: WidgetStateProperty.resolveWith((states) {
-                              if (states.contains(WidgetState.selected)) {
-                                return AppTokens.bgElevated;
-                              }
-                              return AppTokens.bgSurface;
-                            }),
-                          ),
-                        ),
-                      ),
-                    ] else ...[
-                      Container(
-                        margin: const EdgeInsets.fromLTRB(
-                          AppTokens.screenGutter,
-                          AppTokens.space8,
-                          AppTokens.screenGutter,
-                          0,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                        decoration: BoxDecoration(
-                          color: AppTokens.bgSurface,
-                          borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                          border: Border.all(color: AppTokens.borderSubtle),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.history_rounded, size: 16, color: AppTokens.goldPrimary),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Historical Lineup for Gameweek $selectedGw',
-                              style: AppTextStyles.caption.copyWith(color: AppTokens.textPrimary, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // Header Metrics Card
-                    Container(
-                      margin: const EdgeInsets.all(AppTokens.screenGutter),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTokens.space16,
-                        vertical: AppTokens.space12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTokens.bgSurface,
-                        borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                        border: Border.all(color: AppTokens.borderSubtle, width: 1.0),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'PROJECTED POINTS',
-                                  style: AppTextStyles.label.copyWith(
-                                    color: AppTokens.textSecondary,
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.8,
-                                  ),
+                            child: SegmentedButton<bool>(
+                              segments: const [
+                                ButtonSegment<bool>(
+                                  value: false,
+                                  label: Text('My Lineup'),
+                                  icon: Icon(Icons.person_pin_circle_outlined, size: 16),
                                 ),
-                                const SizedBox(height: 4.0),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        result.totalExpectedPoints.toStringAsFixed(1),
-                                        style: AppTextStyles.display.copyWith(
-                                          fontSize: 28.0,
-                                          color: AppTokens.neonPrimary,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4.0),
-                                      Text(
-                                        'xP',
-                                        style: AppTextStyles.headline.copyWith(
-                                          color: AppTokens.neonPrimary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                ButtonSegment<bool>(
+                                  value: true,
+                                  label: Text('Recommended'),
+                                  icon: Icon(Icons.auto_awesome_outlined, size: 16),
                                 ),
                               ],
+                              selected: {lineupState.isRecommendedMode},
+                              onSelectionChanged: (val) {
+                                ref.read(lineupNotifierProvider.notifier).setRecommendedMode(val.first);
+                              },
+                              style: ButtonStyle(
+                                visualDensity: VisualDensity.compact,
+                                backgroundColor: WidgetStateProperty.resolveWith((states) {
+                                  if (states.contains(WidgetState.selected)) {
+                                    return colors.bgElevated;
+                                  }
+                                  return colors.bgSurface;
+                                }),
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 8.0),
-                          Flexible(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                        ] else ...[
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(
+                              AppTokens.screenGutter,
+                              AppTokens.space8,
+                              AppTokens.screenGutter,
+                              0,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                            decoration: BoxDecoration(
+                              color: colors.bgSurface,
+                              borderRadius: BorderRadius.circular(AppTokens.radiusCard),
+                              border: Border.all(color: colors.borderSubtle),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
-                                  decoration: BoxDecoration(
-                                    color: AppTokens.bgElevated,
-                                    borderRadius: BorderRadius.circular(AppTokens.radiusChip),
-                                    border: Border.all(color: AppTokens.borderSubtle),
-                                  ),
-                                  child: Text(
-                                    '${result.formation[1]}-${result.formation[2]}-${result.formation[3]}',
-                                    style: AppTextStyles.numeric.copyWith(
-                                      color: AppTokens.textPrimary,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 14.0,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6.0),
+                                Icon(Icons.history_rounded, size: 16, color: colors.accent),
+                                const SizedBox(width: 6),
                                 Text(
-                                  'Captain: ${result.captain.webName} (C)',
-                                  style: AppTextStyles.caption.copyWith(color: AppTokens.goldPrimary),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  'Vice: ${result.viceCaptain.webName} (V)',
-                                  style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
-                                  overflow: TextOverflow.ellipsis,
+                                  'Historical Lineup for Gameweek $selectedGw',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: colors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ],
-                      ),
-                    ),
 
-                    // Pitch View (D7)
-                    PitchView(
-                      startingXi: result.startingXi,
-                      captain: result.captain,
-                      viceCaptain: result.viceCaptain,
-                      selectedPlayerId: _selectedPlayer?.fplId,
-                      onPlayerTap: (p) {
-                        setState(() {
-                          _selectedPlayer = p;
-                        });
-                        _showPlayerActionSheet(p, selectedGw);
-                      },
-                      onPlayerLongPress: (p) => _showPlayerActionSheet(p, selectedGw),
-                    ),
-
-                    const SizedBox(height: 12.0),
-
-                    // Bench Strip (D8)
-                    BenchStrip(
-                      benchPlayers: result.bench,
-                      selectedPlayerId: _selectedPlayer?.fplId,
-                      onPlayerTap: (p) {
-                        setState(() {
-                          _selectedPlayer = p;
-                        });
-                        _showPlayerActionSheet(p, selectedGw);
-                      },
-                      onPlayerLongPress: (p) => _showPlayerActionSheet(p, selectedGw),
-                    ),
-
-                    const SizedBox(height: 16.0),
-
-                    // Freshness & Stale Handling (Frontend Plan P10 / Spec §10)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
-                      child: FreshnessLabel(
-                        lastUpdated: squadState.lastSyncTime ?? DateTime.now(),
-                        staleThreshold: const Duration(minutes: 10),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16.0),
-
-                    // Save Lineup Action
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
-                      child: Builder(
-                        builder: (context) {
-                          final lastSync = squadState.lastSyncTime ?? DateTime.now();
-                          final isStale = DateTime.now().difference(lastSync) > const Duration(minutes: 10);
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                        // Header Metrics Card (Layered Bento Card §8.9)
+                        Container(
+                          margin: const EdgeInsets.all(AppTokens.screenGutter),
+                          padding: const EdgeInsets.all(AppTokens.space16),
+                          decoration: BoxDecoration(
+                            color: colors.bgSurface,
+                            borderRadius: BorderRadius.circular(AppTokens.radiusCard),
+                            border: Border.all(color: colors.borderSubtle, width: 1.0),
+                          ),
+                          child: Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: AppTokens.space12,
+                            runSpacing: AppTokens.space12,
                             children: [
-                              AppButton(
-                                label: 'Save lineup',
-                                onPressed: isStale
-                                    ? null
-                                    : () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Lineup saved.')),
-                                        );
-                                      },
-                              ),
-                              if (isStale) ...[
-                                const SizedBox(height: 6.0),
-                                Text(
-                                  'Projections are out of date. Sync to save.',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: AppTokens.statusDoubtful,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'PROJECTED POINTS',
+                                    style: AppTextStyles.label.copyWith(
+                                      color: colors.textSecondary,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.8,
+                                    ),
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                                  const SizedBox(height: 4.0),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          result.totalExpectedPoints.toStringAsFixed(1),
+                                          style: AppTextStyles.display.copyWith(
+                                            fontSize: 28.0,
+                                            color: colors.accent,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4.0),
+                                        Text(
+                                          'xP',
+                                          style: AppTextStyles.headline.copyWith(
+                                            color: colors.accent,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+                                    decoration: BoxDecoration(
+                                      color: colors.bgElevated,
+                                      borderRadius: BorderRadius.circular(AppTokens.radiusChip),
+                                      border: Border.all(color: colors.borderSubtle),
+                                    ),
+                                    child: Text(
+                                      '${result.formation[1]}-${result.formation[2]}-${result.formation[3]}',
+                                      style: AppTextStyles.numeric.copyWith(
+                                        color: colors.textPrimary,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14.0,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6.0),
+                                  Text(
+                                    'Captain: ${result.captain.webName} (C)',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: colors.accent,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'Vice: ${result.viceCaptain.webName} (V)',
+                                    style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
                             ],
-                          );
-                        },
-                      ),
-                    ),
+                          ),
+                        ),
 
-                    const SizedBox(height: 24.0),
-                  ],
+                        // Pitch View (D7)
+                        PitchView(
+                          startingXi: result.startingXi,
+                          captain: result.captain,
+                          viceCaptain: result.viceCaptain,
+                          selectedPlayerId: _selectedPlayer?.fplId,
+                          onPlayerTap: (p) {
+                            setState(() {
+                              _selectedPlayer = p;
+                            });
+                            _showPlayerActionSheet(p, selectedGw, colors);
+                          },
+                          onPlayerLongPress: (p) => _showPlayerActionSheet(p, selectedGw, colors),
+                        ),
+
+                        // Performance Index Legend Row (§8.9)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTokens.screenGutter,
+                            vertical: AppTokens.space8,
+                          ),
+                          child: Text(
+                            'Performance index (0–100). Dashed ring: start chance below 75 %.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textSecondary,
+                              fontSize: 11.0,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+
+                        const SizedBox(height: 4.0),
+
+                        // Bench Strip (D8)
+                        BenchStrip(
+                          benchPlayers: result.bench,
+                          selectedPlayerId: _selectedPlayer?.fplId,
+                          onPlayerTap: (p) {
+                            setState(() {
+                              _selectedPlayer = p;
+                            });
+                            _showPlayerActionSheet(p, selectedGw, colors);
+                          },
+                          onPlayerLongPress: (p) => _showPlayerActionSheet(p, selectedGw, colors),
+                        ),
+
+                        const SizedBox(height: 16.0),
+
+                        // Freshness & Stale Handling (Frontend Plan P10 / Spec §10)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
+                          child: FreshnessLabel(
+                            lastUpdated: squadState.lastSyncTime ?? DateTime.now(),
+                            staleThreshold: const Duration(minutes: 10),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16.0),
+
+                        // Save Lineup Action
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
+                          child: Builder(
+                            builder: (context) {
+                              final lastSync = squadState.lastSyncTime ?? DateTime.now();
+                              final isStale = DateTime.now().difference(lastSync) > const Duration(minutes: 10);
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  AppButton(
+                                    label: 'Save lineup',
+                                    variant: AppButtonVariant.primary,
+                                    onPressed: isStale
+                                        ? null
+                                        : () {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Lineup saved.')),
+                                            );
+                                          },
+                                  ),
+                                  if (isStale) ...[
+                                    const SizedBox(height: 6.0),
+                                    Text(
+                                      'Projections are out of date. Sync to save.',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: colors.statusWarn,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 24.0),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
     );
   }
 }

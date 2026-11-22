@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../optimiser/player_candidate.dart';
+import '../theme/app_colors.dart';
 import '../theme/tokens.dart';
 import 'xp_badge.dart';
 
@@ -25,6 +26,7 @@ class PlayerChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final priceStr = '£${(player.priceTenths / 10.0).toStringAsFixed(1)}m';
 
     return Material(
@@ -38,15 +40,15 @@ class PlayerChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppTokens.neonPrimary.withValues(alpha: 0.2)
-                : AppTokens.bgElevated.withValues(alpha: 0.85),
+                ? colors.accent.withValues(alpha: 0.2)
+                : colors.bgElevated.withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(AppTokens.radiusChip),
             border: Border.all(
               color: isSelected
-                  ? AppTokens.neonPrimary
+                  ? colors.accent
                   : isCaptain
-                      ? AppTokens.goldPrimary
-                      : AppTokens.borderSubtle,
+                      ? colors.accent
+                      : colors.borderSubtle,
               width: isCaptain || isSelected ? 1.5 : 1.0,
             ),
             boxShadow: [
@@ -69,10 +71,10 @@ class PlayerChip extends StatelessWidget {
                     width: 28.0,
                     height: 28.0,
                     decoration: BoxDecoration(
-                      color: AppTokens.bgSurface,
+                      color: colors.bgSurface,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: _positionColor(player.position),
+                        color: _positionColor(player.position, colors),
                         width: 1.5,
                       ),
                     ),
@@ -80,7 +82,7 @@ class PlayerChip extends StatelessWidget {
                       child: Text(
                         player.position,
                         style: TextStyle(
-                          color: _positionColor(player.position),
+                          color: _positionColor(player.position, colors),
                           fontSize: 9.0,
                           fontWeight: FontWeight.w800,
                         ),
@@ -94,13 +96,13 @@ class PlayerChip extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(2.0),
                         decoration: BoxDecoration(
-                          color: isCaptain ? AppTokens.goldPrimary : AppTokens.textSecondary,
+                          color: isCaptain ? colors.accent : colors.textSecondary,
                           shape: BoxShape.circle,
                         ),
                         child: Text(
                           isCaptain ? 'C' : 'V',
-                          style: const TextStyle(
-                            color: Colors.black,
+                          style: TextStyle(
+                            color: colors.bgBase,
                             fontSize: 8.0,
                             fontWeight: FontWeight.w900,
                           ),
@@ -116,8 +118,8 @@ class PlayerChip extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppTokens.textPrimary,
+                style: TextStyle(
+                  color: colors.textPrimary,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -129,8 +131,8 @@ class PlayerChip extends StatelessWidget {
               // Price
               Text(
                 priceStr,
-                style: const TextStyle(
-                  color: AppTokens.textSecondary,
+                style: TextStyle(
+                  color: colors.textSecondary,
                   fontSize: 9.0,
                   fontWeight: FontWeight.w500,
                 ),
@@ -142,7 +144,7 @@ class PlayerChip extends StatelessWidget {
     );
   }
 
-  Color _positionColor(String pos) {
+  Color _positionColor(String pos, AppColors colors) {
     switch (pos) {
       case 'GK':
         return const Color(0xFFF59E0B);
@@ -153,7 +155,7 @@ class PlayerChip extends StatelessWidget {
       case 'FWD':
         return const Color(0xFFEF4444);
       default:
-        return AppTokens.textSecondary;
+        return colors.textSecondary;
     }
   }
 }

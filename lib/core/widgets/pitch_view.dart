@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../optimiser/player_candidate.dart';
+import '../theme/app_colors.dart';
 import '../theme/tokens.dart';
 import 'player_chip.dart';
 
-/// Component D7: PitchView (Frontend Implementation Plan §4.1).
+/// Component D7: PitchView (Frontend Implementation Plan §4.1 & Visual Redesign §8.9).
 /// Custom-painted tactical pitch showing starting XI arranged by formation.
 class PitchView extends StatelessWidget {
   final List<PlayerCandidate> startingXi;
@@ -25,6 +26,7 @@ class PitchView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final gks = startingXi.where((p) => p.position == 'GK').toList();
     final defs = startingXi.where((p) => p.position == 'DEF').toList();
     final mids = startingXi.where((p) => p.position == 'MID').toList();
@@ -34,10 +36,10 @@ class PitchView extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-        border: Border.all(color: AppTokens.borderSubtle, width: 1.0),
+        border: Border.all(color: colors.borderSubtle, width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
+            color: Colors.black.withValues(alpha: 0.35),
             blurRadius: 12.0,
             offset: const Offset(0, 4),
           ),
@@ -46,7 +48,7 @@ class PitchView extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
         child: CustomPaint(
-          painter: _PitchPainter(),
+          painter: _PitchPainter(colors: colors),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
             child: Column(
@@ -89,20 +91,24 @@ class PitchView extends StatelessWidget {
 }
 
 class _PitchPainter extends CustomPainter {
+  final AppColors colors;
+
+  _PitchPainter({required this.colors});
+
   @override
   void paint(Canvas canvas, Size size) {
-    // Pitch background gradient
+    // Pitch background gradient from theme tokens
     final rect = Offset.zero & size;
     final bgPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: AppTokens.bgPitchGradient,
+        colors: [colors.pitchTop, colors.pitchBottom],
       ).createShader(rect);
     canvas.drawRect(rect, bgPaint);
 
     final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.12)
+      ..color = Colors.white.withValues(alpha: 0.14)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
@@ -119,7 +125,7 @@ class _PitchPainter extends CustomPainter {
     final center = Offset(size.width / 2.0, midY);
     canvas.drawCircle(center, 40.0, linePaint);
     final spotPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.2)
+      ..color = Colors.white.withValues(alpha: 0.25)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, 2.5, spotPaint);
 
@@ -143,5 +149,6 @@ class _PitchPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _PitchPainter oldDelegate) =>
+      oldDelegate.colors != colors;
 }
