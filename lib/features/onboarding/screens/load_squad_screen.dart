@@ -76,6 +76,7 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
     });
 
     final colors = AppColors.of(context);
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final currentStepIndex = _getStepIndex(squadState.step);
     final progressFraction = (squadState.step == SquadLoadingStep.completed)
         ? 1.0
@@ -111,7 +112,7 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                   child: TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 350),
+                    duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 350),
                     curve: Curves.easeInOut,
                     tween: Tween<double>(begin: 0.08, end: progressFraction),
                     builder: (context, value, _) => LinearProgressIndicator(

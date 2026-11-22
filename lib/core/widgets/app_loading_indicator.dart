@@ -49,7 +49,7 @@ class AppLoadingIndicator extends StatelessWidget {
         child: SizedBox(
           height: strokeWidth,
           child: LinearProgressIndicator(
-            value: value,
+            value: reduceMotion ? (value ?? 0.75) : value,
             backgroundColor: colors.bgElevated,
             valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
           ),

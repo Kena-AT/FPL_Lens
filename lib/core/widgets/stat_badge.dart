@@ -111,34 +111,38 @@ class StatBadge extends StatelessWidget {
     final labelStyle = _getLabelStyle(colors);
     final iconSize = _getIconSize();
 
-    Widget valueRow = Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        if (icon != null) ...[
-          Icon(
-            icon,
-            size: iconSize,
-            color: valueStyle.color,
-          ),
-          SizedBox(width: size == StatBadgeSize.hero ? AppTokens.space8 : AppTokens.space4),
-        ],
-        Text(
-          value,
-          style: valueStyle,
-        ),
-        if (unit != null && unit!.isNotEmpty) ...[
-          const SizedBox(width: AppTokens.space2),
-          Text(
-            unit!,
-            style: labelStyle.copyWith(
-              color: colors.textSecondary,
-              fontWeight: FontWeight.w600,
+    Widget valueRow = FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: iconSize,
+              color: valueStyle.color,
             ),
+            SizedBox(width: size == StatBadgeSize.hero ? AppTokens.space8 : AppTokens.space4),
+          ],
+          Text(
+            value,
+            style: valueStyle,
           ),
+          if (unit != null && unit!.isNotEmpty) ...[
+            const SizedBox(width: AppTokens.space2),
+            Text(
+              unit!,
+              style: labelStyle.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
 
     Widget content;
@@ -157,16 +161,20 @@ class StatBadge extends StatelessWidget {
           ],
         );
       } else {
-        content = Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label!,
-              style: labelStyle,
-            ),
-            const SizedBox(width: AppTokens.space8),
-            valueRow,
-          ],
+        content = FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label!,
+                style: labelStyle,
+              ),
+              const SizedBox(width: AppTokens.space8),
+              valueRow,
+            ],
+          ),
         );
       }
     } else {

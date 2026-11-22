@@ -130,7 +130,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
               animation: _lineWidthAnimation,
               builder: (context, _) => Container(
                 height: 2.0,
-                width: _lineWidthAnimation.value,
+                width: (MediaQuery.maybeOf(context)?.disableAnimations ?? false)
+                    ? 120.0
+                    : _lineWidthAnimation.value,
                 decoration: BoxDecoration(
                   color: colors.accent,
                   borderRadius: BorderRadius.circular(1.0),
@@ -145,6 +147,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
               width: 120.0,
               child: _showProgress
                   ? LinearProgressIndicator(
+                      value: (MediaQuery.maybeOf(context)?.disableAnimations ?? false) ? 0.75 : null,
                       backgroundColor: colors.borderSubtle,
                       valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
                     )
