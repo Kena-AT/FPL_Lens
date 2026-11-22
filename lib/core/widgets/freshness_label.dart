@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../formatting/app_formatters.dart';
+import '../theme/app_colors.dart';
 import '../theme/text_styles.dart';
 import '../theme/tokens.dart';
 
@@ -19,8 +20,9 @@ class FreshnessLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final stale = isStale;
-    final dotColor = stale ? AppTokens.statusDoubtful : AppTokens.statusAvailable;
+    final dotColor = stale ? colors.statusWarn : colors.statusOk;
     final relative = AppFormatters.formatRelativeTime(lastUpdated);
 
     final text = customLabel ??
@@ -46,7 +48,7 @@ class FreshnessLabel extends StatelessWidget {
             child: Text(
               text,
               style: AppTextStyles.caption.copyWith(
-                color: stale ? AppTokens.statusDoubtful : AppTokens.textSecondary,
+                color: stale ? colors.statusWarn : colors.textSecondary,
               ),
               overflow: TextOverflow.ellipsis,
             ),

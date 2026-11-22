@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/theme/tokens.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../squad/screens/squad_screen.dart';
 import '../../squad/providers/squad_provider.dart';
 import 'home_screen.dart';
@@ -41,17 +41,19 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
       bottomNavigationBar: Container(
         height: 64,
-        decoration: const BoxDecoration(
-          color: AppTokens.bgSurface,
-          border: Border(top: BorderSide(color: AppTokens.borderSubtle)),
+        decoration: BoxDecoration(
+          color: colors.bgSurface,
+          border: Border(top: BorderSide(color: colors.borderSubtle)),
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
@@ -67,8 +69,8 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.transparent,
           elevation: 0,
-          selectedItemColor: AppTokens.neonPrimary,
-          unselectedItemColor: AppTokens.textSecondary,
+          selectedItemColor: colors.accent,
+          unselectedItemColor: colors.textSecondary,
           selectedFontSize: 12,
           unselectedFontSize: 12,
           showSelectedLabels: true,
