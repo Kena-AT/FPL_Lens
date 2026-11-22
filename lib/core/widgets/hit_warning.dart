@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../theme/text_styles.dart';
 import '../theme/tokens.dart';
 
-/// Component D15: HitWarning (Frontend Implementation Plan §4.1, Spec §6.2).
+/// Component D15: HitWarning (Frontend Implementation Plan §4.1, Spec §6.2 & Visual Redesign §8.10).
 /// Displays clear warning and points penalty when transfers exceed free allowance.
 class HitWarning extends StatelessWidget {
   final int hitCost; // e.g. 4, 8, 12
@@ -21,6 +22,7 @@ class HitWarning extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (hitCost <= 0) return const SizedBox.shrink();
+    final colors = AppColors.of(context);
 
     final extraTransfers = transferCount - freeTransfers;
     final message = extraTransfers == 1
@@ -33,10 +35,10 @@ class HitWarning extends StatelessWidget {
         vertical: AppTokens.space12,
       ),
       decoration: BoxDecoration(
-        color: AppTokens.statusDoubtful.withValues(alpha: 0.12),
+        color: colors.statusWarn.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
         border: Border.all(
-          color: AppTokens.statusDoubtful.withValues(alpha: 0.35),
+          color: colors.statusWarn.withValues(alpha: 0.35),
           width: 1.0,
         ),
       ),
@@ -46,12 +48,12 @@ class HitWarning extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppTokens.space8),
             decoration: BoxDecoration(
-              color: AppTokens.statusDoubtful.withValues(alpha: 0.2),
+              color: colors.statusWarn.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.warning_amber_rounded,
-              color: AppTokens.statusDoubtful,
+              color: colors.statusWarn,
               size: 20.0,
             ),
           ),
@@ -66,7 +68,7 @@ class HitWarning extends StatelessWidget {
                     Text(
                       'Hit Penalty: -$hitCost pts',
                       style: AppTextStyles.label.copyWith(
-                        color: AppTokens.statusDoubtful,
+                        color: colors.statusWarn,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -76,7 +78,7 @@ class HitWarning extends StatelessWidget {
                 Text(
                   message,
                   style: AppTextStyles.caption.copyWith(
-                    color: AppTokens.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
               ],
@@ -85,7 +87,7 @@ class HitWarning extends StatelessWidget {
           if (onDismiss != null)
             IconButton(
               icon: const Icon(Icons.close_rounded, size: 18.0),
-              color: AppTokens.textSecondary,
+              color: colors.textSecondary,
               onPressed: onDismiss,
               tooltip: 'Dismiss warning',
             ),

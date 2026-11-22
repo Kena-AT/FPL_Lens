@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/optimiser/player_candidate.dart';
 import '../../../core/optimiser/transfer_optimiser.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/candidate_picker.dart';
@@ -309,9 +310,9 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     if (providerId == null || apiKey == null || apiKey.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please connect an AI Key in Settings to generate Tactical Advice.'),
-            backgroundColor: AppTokens.statusDoubtful,
+          SnackBar(
+            content: const Text('Please connect an AI Key in Settings to generate Tactical Advice.'),
+            backgroundColor: Theme.of(context).extension<AppColors>()?.statusWarn ?? AppTokens.statusDoubtful,
           ),
         );
       }
@@ -431,12 +432,17 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final squadState = ref.watch(squadNotifierProvider);
 
     if (!squadState.hasSquad || squadState.squad.length != 15) {
       return Scaffold(
-        backgroundColor: AppTokens.bgBase,
-        appBar: AppBar(title: const Text('Transfer Lab'), backgroundColor: AppTokens.bgBase),
+        backgroundColor: colors.bgBase,
+        appBar: AppBar(
+          title: Text('Transfer Lab', style: AppTextStyles.headline.copyWith(color: colors.textPrimary)),
+          backgroundColor: colors.bgBase,
+          elevation: 0,
+        ),
         body: Center(
           child: EmptyState(
             icon: Icons.swap_horiz_outlined,
@@ -452,25 +458,25 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     final bankStr = '£${(squadState.bankTenths / 10.0).toStringAsFixed(1)}m';
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
-        title: const Text('Transfer Lab', style: AppTextStyles.headline),
-        backgroundColor: AppTokens.bgBase,
+        title: Text('Transfer Lab', style: AppTextStyles.headline.copyWith(color: colors.textPrimary)),
+        backgroundColor: colors.bgBase,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.grid_on_rounded, color: AppTokens.goldPrimary),
+            icon: Icon(Icons.grid_on_rounded, color: colors.textPrimary),
             tooltip: 'Squad Fixture Heatmap',
             onPressed: () => context.push('/heatmap'),
           ),
           IconButton(
             icon: _isOptimizing
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20.0,
                     height: 20.0,
-                    child: CircularProgressIndicator(strokeWidth: 2.0, color: AppTokens.neonPrimary),
+                    child: CircularProgressIndicator(strokeWidth: 2.0, color: colors.accent),
                   )
-                : const Icon(Icons.auto_awesome_rounded, color: AppTokens.neonPrimary),
+                : Icon(Icons.auto_awesome_rounded, color: colors.accent),
             tooltip: 'Run Transfer Optimiser',
             onPressed: _isOptimizing ? null : _runOptimiser,
           ),
@@ -485,11 +491,11 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
               padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 4.0),
               child: Row(
                 children: [
-                  _buildStrategyTab(TransferStrategy.optimal, 'Optimal (Auto)'),
+                  _buildStrategyTab(TransferStrategy.optimal, 'Optimal (Auto)', colors),
                   const SizedBox(width: 6.0),
-                  _buildStrategyTab(TransferStrategy.singleOnly, '1 Transfer'),
+                  _buildStrategyTab(TransferStrategy.singleOnly, '1 Transfer', colors),
                   const SizedBox(width: 6.0),
-                  _buildStrategyTab(TransferStrategy.multiOnly, 'Multi-Transfer'),
+                  _buildStrategyTab(TransferStrategy.multiOnly, 'Multi-Transfer', colors),
                 ],
               ),
             ),
@@ -499,11 +505,11 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
               padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 4.0),
               child: Row(
                 children: [
-                  _buildHorizonTab(1, 'Horizon 1 (Next GW)'),
+                  _buildHorizonTab(1, 'Horizon 1 (Next GW)', colors),
                   const SizedBox(width: 8.0),
-                  _buildHorizonTab(3, 'Horizon 3'),
+                  _buildHorizonTab(3, 'Horizon 3', colors),
                   const SizedBox(width: 8.0),
-                  _buildHorizonTab(5, 'Horizon 5'),
+                  _buildHorizonTab(5, 'Horizon 5', colors),
                 ],
               ),
             ),
@@ -513,18 +519,18 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 4.0),
                 padding: const EdgeInsets.all(AppTokens.space12),
                 decoration: BoxDecoration(
-                  color: AppTokens.statusOut.withValues(alpha: 0.15),
+                  color: colors.statusError.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                  border: Border.all(color: AppTokens.statusOut),
+                  border: Border.all(color: colors.statusError),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline_rounded, color: AppTokens.statusOut, size: 20.0),
+                    Icon(Icons.error_outline_rounded, color: colors.statusError, size: 20.0),
                     const SizedBox(width: 8.0),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
+                        style: AppTextStyles.caption.copyWith(color: colors.statusError),
                       ),
                     ),
                   ],
@@ -536,16 +542,18 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
               margin: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 6.0),
               padding: const EdgeInsets.all(AppTokens.space12),
               decoration: BoxDecoration(
-                color: AppTokens.bgSurface,
+                color: colors.bgSurface,
                 borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                border: Border.all(color: AppTokens.borderSubtle),
+                border: Border.all(color: colors.borderSubtle),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+              child: Wrap(
+                alignment: WrapAlignment.spaceAround,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppTokens.space12,
+                runSpacing: AppTokens.space8,
                 children: [
-                  _buildMetric('IN THE BANK', bankStr, AppTokens.goldPrimary),
-                  Container(width: 1.0, height: 28.0, color: AppTokens.borderSubtle),
-                  _buildMetric('FREE TRANSFERS', '${squadState.freeTransfers} (max 5*)', AppTokens.neonPrimary),
+                  _buildMetric('IN THE BANK', bankStr, colors.accent, colors),
+                  _buildMetric('FREE TRANSFERS', '${squadState.freeTransfers} (max 5*)', colors.accent, colors),
                 ],
               ),
             ),
@@ -556,7 +564,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
               child: Text(
                 '*Free transfers bank up to 5 [VERIFY]. Wildcard/Free Hit preserves banked transfers [VERIFY].',
                 style: AppTextStyles.caption.copyWith(
-                  color: AppTokens.textDisabled,
+                  color: colors.textDisabled,
                   fontSize: 10.5,
                 ),
                 textAlign: TextAlign.center,
@@ -580,22 +588,25 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 8.0),
                 padding: const EdgeInsets.all(AppTokens.space16),
                 decoration: BoxDecoration(
-                  color: AppTokens.bgElevated,
+                  color: colors.bgElevated,
                   borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                  border: Border.all(color: AppTokens.neonPrimary.withValues(alpha: 0.4)),
+                  border: Border.all(color: colors.accent.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: AppTokens.space8,
+                      runSpacing: AppTokens.space4,
                       children: [
                         Text(
                           _recommendedMove!.transfersOut.isEmpty
                               ? 'RECOMMENDED: ROLL TRANSFER'
                               : 'RECOMMENDED MOVE (${_recommendedMove!.transferCount} TRANSFER${_recommendedMove!.transferCount > 1 ? "S" : ""})',
                           style: AppTextStyles.label.copyWith(
-                            color: AppTokens.neonPrimary,
+                            color: colors.accent,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.8,
                           ),
@@ -603,7 +614,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                         Text(
                           '${_recommendedMove!.netExpectedPoints.toStringAsFixed(1)} xP',
                           style: AppTextStyles.numeric.copyWith(
-                            color: AppTokens.neonPrimary,
+                            color: colors.accent,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -617,25 +628,31 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('OUT', style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut)),
+                                Text('OUT', style: AppTextStyles.caption.copyWith(color: colors.statusError)),
                                 const SizedBox(height: 2.0),
                                 Text(
                                   _recommendedMove!.transfersOut.map((p) => p.webName).join(', '),
-                                  style: AppTextStyles.headline.copyWith(fontSize: 14.0),
+                                  style: AppTextStyles.headline.copyWith(
+                                    fontSize: 14.0,
+                                    color: colors.textPrimary,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_rounded, color: AppTokens.textSecondary),
+                          Icon(Icons.arrow_forward_rounded, color: colors.textSecondary),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text('IN', style: AppTextStyles.caption.copyWith(color: AppTokens.statusAvailable)),
+                                Text('IN', style: AppTextStyles.caption.copyWith(color: colors.statusOk)),
                                 const SizedBox(height: 2.0),
                                 Text(
                                   _recommendedMove!.transfersIn.map((p) => p.webName).join(', '),
-                                  style: AppTextStyles.headline.copyWith(fontSize: 14.0),
+                                  style: AppTextStyles.headline.copyWith(
+                                    fontSize: 14.0,
+                                    color: colors.textPrimary,
+                                  ),
                                 ),
                               ],
                             ),
@@ -645,7 +662,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                     else
                       Text(
                         'No transfer improves your projected squad value after hit costs.',
-                        style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary, fontSize: 13.0),
+                        style: AppTextStyles.body.copyWith(color: colors.textSecondary, fontSize: 13.0),
                       ),
                   ],
                 ),
@@ -653,11 +670,11 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
 
             // xP Calculation Explanation & Strategic Rationale Card
             if (_recommendedMove != null && _recommendedMove!.transfersOut.isNotEmpty)
-              _buildXpAttributionCard(),
+              _buildXpAttributionCard(colors),
 
             // 5-GW Fixture Difficulty & Transfer Heatmap
             if (_recommendedMove != null && _recommendedMove!.transfersOut.isNotEmpty)
-              _buildTransferHeatmapComparison(),
+              _buildTransferHeatmapComparison(colors),
 
             // Chip Recommendations Section
             if (_chipRecommendations.isNotEmpty) ...[
@@ -665,13 +682,17 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 6.0),
                 child: Text(
                   'CHIP TACTICAL EVALUATION',
-                  style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.8),
+                  style: AppTextStyles.label.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: colors.textPrimary,
+                  ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
                 child: Column(
-                  children: _chipRecommendations.map((chip) => _buildChipCard(chip)).toList(),
+                  children: _chipRecommendations.map((chip) => _buildChipCard(chip, colors)).toList(),
                 ),
               ),
             ],
@@ -680,7 +701,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
             if (_recommendedMove != null) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 8.0),
-                child: _buildAiAdvisorCard(),
+                child: _buildAiAdvisorCard(colors),
               ),
             ],
 
@@ -690,7 +711,11 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 8.0),
                 child: Text(
                   'PROJECTED LINEUP',
-                  style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.8),
+                  style: AppTextStyles.label.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: colors.textPrimary,
+                  ),
                 ),
               ),
               PitchView(
@@ -705,8 +730,8 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 child: Center(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTokens.neonPrimary,
-                      side: const BorderSide(color: AppTokens.neonPrimary),
+                      foregroundColor: colors.accent,
+                      side: BorderSide(color: colors.accent),
                       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
                     ),
                     icon: const Icon(Icons.bolt_rounded),
@@ -723,7 +748,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     );
   }
 
-  Widget _buildStrategyTab(TransferStrategy strat, String title) {
+  Widget _buildStrategyTab(TransferStrategy strat, String title, AppColors colors) {
     final isSelected = _selectedStrategy == strat;
     return Expanded(
       child: GestureDetector(
@@ -739,19 +764,22 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           decoration: BoxDecoration(
-            color: isSelected ? AppTokens.goldPrimary.withValues(alpha: 0.15) : AppTokens.bgSurface,
+            color: isSelected ? colors.accent.withValues(alpha: 0.15) : colors.bgSurface,
             borderRadius: BorderRadius.circular(AppTokens.radiusChip),
             border: Border.all(
-              color: isSelected ? AppTokens.goldPrimary : AppTokens.borderSubtle,
+              color: isSelected ? colors.accent : colors.borderSubtle,
             ),
           ),
           child: Center(
-            child: Text(
-              title,
-              style: TextStyle(
-                color: isSelected ? AppTokens.goldPrimary : AppTokens.textSecondary,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 11.5,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: isSelected ? colors.accent : colors.textSecondary,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 11.5,
+                ),
               ),
             ),
           ),
@@ -760,7 +788,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     );
   }
 
-  Widget _buildHorizonTab(int h, String title) {
+  Widget _buildHorizonTab(int h, String title, AppColors colors) {
     final isSelected = _selectedHorizon == h;
     return Expanded(
       child: GestureDetector(
@@ -779,17 +807,17 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           decoration: BoxDecoration(
-            color: isSelected ? AppTokens.neonPrimary.withValues(alpha: 0.15) : AppTokens.bgSurface,
+            color: isSelected ? colors.accent.withValues(alpha: 0.15) : colors.bgSurface,
             borderRadius: BorderRadius.circular(AppTokens.radiusChip),
             border: Border.all(
-              color: isSelected ? AppTokens.neonPrimary : AppTokens.borderSubtle,
+              color: isSelected ? colors.accent : colors.borderSubtle,
             ),
           ),
           child: Center(
             child: Text(
               'H$h',
               style: TextStyle(
-                color: isSelected ? AppTokens.neonPrimary : AppTokens.textSecondary,
+                color: isSelected ? colors.accent : colors.textSecondary,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 12.0,
               ),
@@ -800,18 +828,18 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     );
   }
 
-  Widget _buildChipCard(ChipRecommendation chip) {
+  Widget _buildChipCard(ChipRecommendation chip, AppColors colors) {
     final isRecommended = chip.isRecommended;
-    final color = isRecommended ? AppTokens.neonPrimary : AppTokens.textDisabled;
+    final color = isRecommended ? colors.accent : colors.textDisabled;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6.0),
       padding: const EdgeInsets.all(AppTokens.space12),
       decoration: BoxDecoration(
-        color: AppTokens.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
         border: Border.all(
-          color: isRecommended ? AppTokens.neonPrimary.withValues(alpha: 0.5) : AppTokens.borderSubtle,
+          color: isRecommended ? colors.accent.withValues(alpha: 0.5) : colors.borderSubtle,
         ),
       ),
       child: Row(
@@ -846,14 +874,14 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                       chip.title,
                       style: AppTextStyles.label.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: isRecommended ? AppTokens.textPrimary : AppTokens.textSecondary,
+                        color: isRecommended ? colors.textPrimary : colors.textSecondary,
                       ),
                     ),
                     if (isRecommended && chip.projectedGain > 0)
                       Text(
                         '+${chip.projectedGain.toStringAsFixed(1)} pts',
                         style: AppTextStyles.numeric.copyWith(
-                          color: AppTokens.neonPrimary,
+                          color: colors.accent,
                           fontSize: 12.0,
                           fontWeight: FontWeight.bold,
                         ),
@@ -864,7 +892,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 Text(
                   chip.reason,
                   style: AppTextStyles.caption.copyWith(
-                    color: AppTokens.textSecondary,
+                    color: colors.textSecondary,
                     fontSize: 11.0,
                   ),
                 ),
@@ -876,13 +904,13 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     );
   }
 
-  Widget _buildAiAdvisorCard() {
+  Widget _buildAiAdvisorCard(AppColors colors) {
     return Container(
       padding: const EdgeInsets.all(AppTokens.space16),
       decoration: BoxDecoration(
-        color: AppTokens.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-        border: Border.all(color: AppTokens.goldPrimary.withValues(alpha: 0.4)),
+        border: Border.all(color: colors.accent.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -892,12 +920,12 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.psychology_rounded, color: AppTokens.goldPrimary, size: 20.0),
+                  Icon(Icons.psychology_rounded, color: colors.accent, size: 20.0),
                   const SizedBox(width: 8.0),
                   Text(
                     'AI TACTICAL ADVISOR',
                     style: AppTextStyles.label.copyWith(
-                      color: AppTokens.goldPrimary,
+                      color: colors.accent,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
                     ),
@@ -905,10 +933,10 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 ],
               ),
               if (_isGeneratingAiAdvice)
-                const SizedBox(
+                SizedBox(
                   width: 16.0,
                   height: 16.0,
-                  child: CircularProgressIndicator(strokeWidth: 2.0, color: AppTokens.goldPrimary),
+                  child: CircularProgressIndicator(strokeWidth: 2.0, color: colors.accent),
                 ),
             ],
           ),
@@ -918,21 +946,21 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
               _aiTacticalAnalysis!,
               style: AppTextStyles.body.copyWith(
                 fontSize: 12.5,
-                color: AppTokens.textPrimary,
+                color: colors.textPrimary,
                 height: 1.4,
               ),
             ),
           ] else ...[
             Text(
               'Generate qualitative tactical rationale analyzing form, fixture difficulty (FDR), and rotation risk for this transfer move.',
-              style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+              style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
             ),
             const SizedBox(height: 10.0),
             Center(
               child: TextButton.icon(
                 style: TextButton.styleFrom(
-                  foregroundColor: AppTokens.goldPrimary,
-                  backgroundColor: AppTokens.goldPrimary.withValues(alpha: 0.1),
+                  foregroundColor: colors.accent,
+                  backgroundColor: colors.accent.withValues(alpha: 0.1),
                   padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
                 ),
                 icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16.0),
@@ -946,7 +974,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     );
   }
 
-  Widget _buildMetric(String label, String value, Color color) {
+  Widget _buildMetric(String label, String value, Color color, AppColors colors) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -956,6 +984,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
             fontSize: 10.0,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.6,
+            color: colors.textSecondary,
           ),
         ),
         const SizedBox(height: 2.0),
@@ -971,7 +1000,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     );
   }
 
-  Widget _buildXpAttributionCard() {
+  Widget _buildXpAttributionCard(AppColors colors) {
     if (_recommendedMove == null || _recommendedMove!.transfersOut.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -983,21 +1012,21 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
       margin: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 6.0),
       padding: const EdgeInsets.all(AppTokens.space12),
       decoration: BoxDecoration(
-        color: AppTokens.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-        border: Border.all(color: AppTokens.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.calculate_outlined, color: AppTokens.goldPrimary, size: 18),
+              Icon(Icons.calculate_outlined, color: colors.accent, size: 18),
               const SizedBox(width: 8.0),
               Text(
                 'xP EXPLANATION & TACTICAL RATIONALE',
                 style: AppTextStyles.label.copyWith(
-                  color: AppTokens.goldPrimary,
+                  color: colors.accent,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.6,
                 ),
@@ -1019,11 +1048,17 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('${outP.webName} → ${inP.webName}', style: AppTextStyles.headline.copyWith(fontSize: 13.5)),
+                        Text(
+                          '${outP.webName} → ${inP.webName}',
+                          style: AppTextStyles.headline.copyWith(
+                            fontSize: 13.5,
+                            color: colors.textPrimary,
+                          ),
+                        ),
                         Text(
                           '${diff >= 0 ? "+" : ""}${diff.toStringAsFixed(1)} xP diff',
                           style: AppTextStyles.numeric.copyWith(
-                            color: diff >= 0 ? AppTokens.statusAvailable : AppTokens.statusOut,
+                            color: diff >= 0 ? colors.statusOk : colors.statusError,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1033,36 +1068,38 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                     _buildAttributionBullet(
                       'Outgoing (${outP.webName})',
                       '${outP.xp} xP • ${(outP.pStart * 100).toInt()}% start chance • Value £${(outP.priceTenths / 10.0).toStringAsFixed(1)}m. Replaced to eliminate tough fixture difficulty and free budget.',
+                      colors,
                     ),
                     _buildAttributionBullet(
                       'Incoming (${inP.webName})',
                       '${inP.xp} xP • ${(inP.pStart * 100).toInt()}% start chance • Value £${(inP.priceTenths / 10.0).toStringAsFixed(1)}m. Superior form, attacking output and favorable upcoming green FDR fixtures.',
+                      colors,
                     ),
                   ],
                 ),
               );
             }),
             if (i < outPlayers.length - 1)
-              const Divider(color: AppTokens.borderSubtle, height: 16.0),
+              Divider(color: colors.borderSubtle, height: 16.0),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildAttributionBullet(String title, String description) {
+  Widget _buildAttributionBullet(String title, String description, AppColors colors) {
     return Padding(
       padding: const EdgeInsets.only(top: 2.0, bottom: 2.0, left: 4.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('• ', style: TextStyle(color: AppTokens.goldPrimary, fontSize: 11)),
+          Text('• ', style: TextStyle(color: colors.accent, fontSize: 11)),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary, fontSize: 11.0),
+                style: AppTextStyles.caption.copyWith(color: colors.textSecondary, fontSize: 11.0),
                 children: [
-                  TextSpan(text: '$title: ', style: const TextStyle(color: AppTokens.textPrimary, fontWeight: FontWeight.w600)),
+                  TextSpan(text: '$title: ', style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600)),
                   TextSpan(text: description),
                 ],
               ),
@@ -1073,7 +1110,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     );
   }
 
-  Widget _buildTransferHeatmapComparison() {
+  Widget _buildTransferHeatmapComparison(AppColors colors) {
     if (_recommendedMove == null || _recommendedMove!.transfersOut.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -1087,9 +1124,9 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
       margin: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 6.0),
       padding: const EdgeInsets.all(AppTokens.space12),
       decoration: BoxDecoration(
-        color: AppTokens.bgElevated,
+        color: colors.bgElevated,
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-        border: Border.all(color: AppTokens.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1099,12 +1136,12 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.grid_on_rounded, color: AppTokens.goldPrimary, size: 18),
+                  Icon(Icons.grid_on_rounded, color: colors.accent, size: 18),
                   const SizedBox(width: 8.0),
                   Text(
                     'WHERE CHANGES ARE PLACED (HEATMAP)',
                     style: AppTextStyles.label.copyWith(
-                      color: AppTokens.goldPrimary,
+                      color: colors.accent,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.6,
                     ),
@@ -1116,7 +1153,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 child: Text(
                   'Full Heatmap →',
                   style: AppTextStyles.caption.copyWith(
-                    color: AppTokens.neonPrimary,
+                    color: colors.accent,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1126,18 +1163,18 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
           const SizedBox(height: 8.0),
           Text(
             'Visual comparison of upcoming 5 gameweek difficulty (FDR). Green cells highlight optimal fixture swings where incoming targets gain significant points advantages.',
-            style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary, fontSize: 11.0),
+            style: AppTextStyles.caption.copyWith(color: colors.textSecondary, fontSize: 11.0),
           ),
           const SizedBox(height: 10.0),
 
           // 5-GW Header
           Row(
             children: [
-              const SizedBox(width: 80.0, child: Text('Player', style: TextStyle(color: AppTokens.textSecondary, fontSize: 10, fontWeight: FontWeight.w600))),
+              SizedBox(width: 80.0, child: Text('Player', style: TextStyle(color: colors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600))),
               for (int w = nextGw; w < nextGw + 5; w++)
                 Expanded(
                   child: Center(
-                    child: Text('GW$w', style: const TextStyle(color: AppTokens.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+                    child: Text('GW$w', style: TextStyle(color: colors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
                   ),
                 ),
             ],
@@ -1146,22 +1183,22 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
 
           // OUT Players Rows (Tougher fixtures)
           for (final p in outPlayers)
-            _buildHeatmapPlayerRow(p, isOut: true),
+            _buildHeatmapPlayerRow(p, isOut: true, colors: colors),
 
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4.0),
-            child: Divider(color: AppTokens.borderSubtle, height: 8.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Divider(color: colors.borderSubtle, height: 8.0),
           ),
 
           // IN Players Rows (Favorable fixtures)
           for (final p in inPlayers)
-            _buildHeatmapPlayerRow(p, isOut: false),
+            _buildHeatmapPlayerRow(p, isOut: false, colors: colors),
         ],
       ),
     );
   }
 
-  Widget _buildHeatmapPlayerRow(PlayerCandidate p, {required bool isOut}) {
+  Widget _buildHeatmapPlayerRow(PlayerCandidate p, {required bool isOut, required AppColors colors}) {
     final difficulties = List.generate(5, (idx) {
       final seed = (p.clubId * 7 + p.fplId + idx * 3) % 4;
       return isOut ? (seed >= 2 ? seed + 2 : 4) : (seed <= 1 ? 2 : 3);
@@ -1178,14 +1215,14 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 Icon(
                   isOut ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
                   size: 12,
-                  color: isOut ? AppTokens.statusOut : AppTokens.statusAvailable,
+                  color: isOut ? colors.statusError : colors.statusOk,
                 ),
                 const SizedBox(width: 2.0),
                 Expanded(
                   child: Text(
                     p.webName,
                     style: AppTextStyles.caption.copyWith(
-                      color: isOut ? AppTokens.statusOut : AppTokens.statusAvailable,
+                      color: isOut ? colors.statusError : colors.statusOk,
                       fontWeight: FontWeight.w600,
                       fontSize: 11.0,
                     ),
@@ -1201,7 +1238,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 2.0),
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 decoration: BoxDecoration(
-                  color: _getFdrColor(fdr),
+                  color: _getFdrColor(fdr, colors),
                   borderRadius: BorderRadius.circular(4.0),
                 ),
                 child: Center(
@@ -1210,7 +1247,7 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.bold,
-                      color: _getFdrTextColor(fdr),
+                      color: _getFdrTextColor(fdr, colors),
                     ),
                   ),
                 ),
@@ -1221,23 +1258,23 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     );
   }
 
-  Color _getFdrColor(int fdr) {
+  Color _getFdrColor(int fdr, AppColors colors) {
     switch (fdr) {
       case 2:
-        return const Color(0xFF00E676).withValues(alpha: 0.85);
+        return colors.statusOk.withValues(alpha: 0.85);
       case 3:
-        return AppTokens.bgElevated;
+        return colors.bgSurface;
       case 4:
-        return const Color(0xFFFF9100).withValues(alpha: 0.85);
+        return colors.statusWarn.withValues(alpha: 0.85);
       case 5:
-        return const Color(0xFFFF5252).withValues(alpha: 0.85);
+        return colors.statusError.withValues(alpha: 0.85);
       default:
-        return AppTokens.bgElevated;
+        return colors.bgSurface;
     }
   }
 
-  Color _getFdrTextColor(int fdr) {
+  Color _getFdrTextColor(int fdr, AppColors colors) {
     if (fdr == 2 || fdr == 4 || fdr == 5) return Colors.black;
-    return AppTokens.textPrimary;
+    return colors.textPrimary;
   }
 }

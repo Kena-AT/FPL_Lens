@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpl_lens/core/theme/app_theme.dart';
 import 'package:fpl_lens/core/storage/app_database.dart';
 import 'package:fpl_lens/data/models/fpl_models.dart';
 import 'package:fpl_lens/features/squad/providers/squad_provider.dart';
@@ -49,13 +50,32 @@ void main() {
     }).toList();
   }
 
-  Widget buildScreen(SquadState squadState) {
+  Widget buildScreen(
+    SquadState squadState, {
+    ThemeMode themeMode = ThemeMode.dark,
+    double textScale = 1.0,
+    bool disableAnimations = false,
+  }) {
     return ProviderScope(
       overrides: [
         squadNotifierProvider.overrideWith((ref) => FakeSquadNotifier(squadState)),
       ],
-      child: const MaterialApp(
-        home: TransferLabScreen(runInBackground: false),
+      child: MaterialApp(
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: themeMode,
+        home: Builder(
+          builder: (context) {
+            final media = MediaQuery.of(context);
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: TextScaler.linear(textScale),
+                disableAnimations: disableAnimations,
+              ),
+              child: const TransferLabScreen(runInBackground: false),
+            );
+          },
+        ),
       ),
     );
   }
@@ -184,5 +204,37 @@ void main() {
     // Verify AI Tactical Advisor section
     expect(find.text('AI TACTICAL ADVISOR'), findsOneWidget);
     expect(find.text('Ask AI Tactical Advisor'), findsOneWidget);
+  });
+
+  testWidgets('TransferLabScreen renders cleanly without overflow at 200% text scale on 360dp narrow viewport in light and dark modes', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final squad = generate15Players();
+    final state = SquadState(
+      squad: squad,
+      bankTenths: 20,
+      freeTransfers: 1,
+      currentGameweek: const GameweekMetadata(id: 8, name: 'Gameweek 8'),
+      nextGameweek: const GameweekMetadata(id: 9, name: 'Gameweek 9'),
+    );
+
+    for (final mode in [ThemeMode.dark, ThemeMode.light]) {
+      await tester.pumpWidget(
+        buildScreen(
+          state,
+          themeMode: mode,
+          textScale: 2.0,
+          disableAnimations: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull, reason: 'Failed in $mode');
+      expect(find.text('Transfer Lab'), findsOneWidget);
+      expect(find.text('Find Optimal Transfers'), findsOneWidget);
+    }
   });
 }
