@@ -143,34 +143,38 @@ class AvailabilityBadge extends StatelessWidget {
           width: 1.0,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 6dp status dot (§16 requirement)
-          Container(
-            width: 6.0,
-            height: 6.0,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 6dp status dot (§16 requirement)
+            Container(
+              width: 6.0,
+              height: 6.0,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
-          const SizedBox(width: AppTokens.space4),
-          Icon(
-            _icon,
-            size: compact ? 12.0 : 14.0,
-            color: color,
-          ),
-          const SizedBox(width: AppTokens.space4),
-          Text(
-            _label,
-            style: AppTextStyles.label.copyWith(
+            const SizedBox(width: AppTokens.space4),
+            Icon(
+              _icon,
+              size: compact ? 12.0 : 14.0,
               color: color,
-              fontWeight: FontWeight.w600,
-              fontSize: compact ? 11.0 : 12.0,
             ),
-          ),
-        ],
+            const SizedBox(width: AppTokens.space4),
+            Text(
+              _label,
+              style: AppTextStyles.label.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: compact ? 11.0 : 12.0,
+              ),
+            ),
+          ],
+        ),
       ),
     );
 

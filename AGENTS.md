@@ -46,6 +46,19 @@ The agent may not, without explicit owner approval for that specific action:
 
 ---
 
+## 3A. Design and Frontend Rules
+
+These rules apply whenever the agent builds or changes any app or website UI.
+
+1. **Visual direction.** Load the `frontend-design` skill before choosing a visual direction. Avoid generic template looks. For FPL Lens, the visual direction is set by the FPL Lens Visual Redesign Design Doc (v1.0 or later), which governs over general guidance.
+2. **Tokens, not values.** Load the `frontend-ui-standards` skill before writing UI code. Colours, spacing, radii, type and components come from design tokens. Hardcoded colour, size or spacing values in screen code are not allowed.
+3. **Motion.** Load the `micro-interactions` skill before writing button states, transitions or motion. Every animation must respect the reduced-motion setting. A reduced-motion path is part of the same change, not a later task.
+4. **Mobile screens.** Load the `mobile-app-design` skill before writing mobile screen code. Follow the existing stack and theme already in the repository (Flutter, Riverpod, the `AppTheme` tokens). Do not introduce a second theme system.
+5. **Say which skill was used.** Before writing UI code, the agent states in one line which skill or skills it loaded. If a named skill is not available in the session, the agent says so, applies the rules in this section directly, and records the gap in its report.
+6. **Verification.** UI changes meet the verification rules in §11 and are checked in light mode, dark mode, and at 200 % text scale.
+
+---
+
 ## 4. Credentials and Secrets
 
 This section is absolute.
@@ -69,7 +82,6 @@ This section is absolute.
 4. Do not skip a verification item. If it cannot be done, mark it **blocked** with a reason. Do not mark it done.
 5. Do not add features outside the current sprint. If a useful addition appears, record it as a proposal for the owner. Do not build it.
 6. Changes to the plan, the spec, or this file are proposed to the owner first. Make the change only after approval.
-7. **No mock data in completed sprints:** Never finish, declare complete, or hand off a sprint with mock data, hardcoded test player lists, mock projection formulas, or mock heuristics intact in production code paths. All production code must be wired to real data models, APIs, and databases. Mock data is permitted strictly and exclusively inside isolated test files (`test/` or `tests/`) or as documented, explicitly-labeled offline fallback states.
 
 ---
 
@@ -145,7 +157,6 @@ Do not disable any of these to make a test pass.
 5. Never run destructive commands against the production database. Use the development branch by default. Confirm the target before any command that writes to a database.
 6. Pin dependency versions. Record new dependencies and their reason in the plan.
 7. Golden files and recorded API fixtures are updated only with an explanation of why the expected output changed.
-8. **Preservation of real user accounts and data during testing:** The agent, test runners, and test suites must **never delete, drop, wipe, or overwrite real user accounts or account entries** in the database. Tests that require database interaction must operate either on ephemeral in-memory databases, roll back their transactions, or strictly scope deletions to test-generated fixtures identified by unique test prefixes. Destructive migrations (such as `alembic downgrade base`) or global table truncations must **never** be executed against the active development database containing the owner's account entries. Any test that performs migration roundtrips must explicitly backup and restore real user accounts.
 
 ---
 
@@ -179,8 +190,6 @@ Do not disable any of these to make a test pass.
 6. If a sprint branch already exists, the agent continues on it and does not create a second one.
 7. Work for one sprint is never done on another sprint's branch, and tasks from later sprints are not added to a sprint branch.
 
----
-
 ## 13. Destructive and Irreversible Actions
 
 Stop and ask the owner before doing any of the following, even if the request seems to allow it:
@@ -188,7 +197,6 @@ Stop and ask the owner before doing any of the following, even if the request se
 - Deleting files that were not created by the agent in this session.
 - Rewriting git history.
 - Dropping or resetting a database or branch.
-- Deleting or wiping user account records from the database during testing or maintenance.
 - Overwriting a configuration file that holds real values.
 - Changing a published API contract that an existing client uses.
 - Any action that cannot be undone and could reasonably go either way.

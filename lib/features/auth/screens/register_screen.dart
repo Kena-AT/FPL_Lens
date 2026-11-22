@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/tokens.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_text_field.dart';
+import '../../../core/widgets/glass_container.dart';
 import '../../../core/widgets/team_id_field.dart';
 import '../providers/auth_provider.dart';
 
+/// Register screen (/auth/register) per Visual Redesign Design Document §8.3 & Sprint R3.
+///
+/// Features solid app bar, centered glass form card, email, display name, team ID,
+/// password, terms checkbox, and register button.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -74,6 +80,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.status == AuthStatus.loading;
 
@@ -93,143 +100,159 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         : null;
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
-        title: const Text('Create account', style: AppTextStyles.title),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTokens.textPrimary),
-          onPressed: () => context.pop(),
+        backgroundColor: colors.bgBase,
+        title: Text(
+          'Create account',
+          style: AppTextStyles.title.copyWith(color: colors.textPrimary),
         ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: colors.textPrimary),
+          onPressed: () => context.go('/auth'),
+        ),
+        elevation: 0,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppTokens.space8),
-              Text(
-                'We need your FPL team ID to load your squad.',
-                style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
-              ),
-              const SizedBox(height: AppTokens.space16),
-
-              // Server Error Banner (placed at the top per spec)
-              if (authState.errorMessage != null) ...[
-                Semantics(
-                  liveRegion: true,
-                  child: Container(
-                    padding: const EdgeInsets.all(AppTokens.space12),
-                    decoration: BoxDecoration(
-                      color: AppTokens.statusOut.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(AppTokens.radiusInput),
-                      border: Border.all(color: AppTokens.statusOut),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTokens.screenGutter,
+              vertical: AppTokens.space16,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420.0),
+              child: GlassContainer(
+                blur: 20.0,
+                borderRadius: BorderRadius.circular(AppTokens.radiusModal),
+                padding: const EdgeInsets.all(AppTokens.space24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Email
+                    AppTextField(
+                      label: 'Email',
+                      hint: 'name@example.com',
+                      controller: _emailController,
+                      type: AppTextFieldType.email,
+                      error: emailError,
+                      enabled: !isLoading,
                     ),
-                    child: Row(
+                    const SizedBox(height: AppTokens.space16),
+
+                    // Display Name
+                    AppTextField(
+                      label: 'Display name',
+                      hint: 'Your name or handle',
+                      controller: _displayNameController,
+                      type: AppTextFieldType.standard,
+                      error: nameError,
+                      enabled: !isLoading,
+                    ),
+                    const SizedBox(height: AppTokens.space16),
+
+                    // FPL Team ID
+                    TeamIdField(
+                      controller: _teamIdController,
+                      onResolved: (id) => setState(() => _resolvedTeamId = id),
+                      enabled: !isLoading,
+                    ),
+                    const SizedBox(height: AppTokens.space16),
+
+                    // Password
+                    AppTextField(
+                      label: 'Password',
+                      controller: _passwordController,
+                      type: AppTextFieldType.password,
+                      error: passwordError,
+                      helper: 'Must be at least 8 characters',
+                      enabled: !isLoading,
+                    ),
+                    const SizedBox(height: AppTokens.space16),
+
+                    // Terms checkbox
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 16.0, color: AppTokens.statusOut),
-                        const SizedBox(width: AppTokens.space8),
+                        Checkbox(
+                          value: _termsAccepted,
+                          activeColor: colors.accent,
+                          checkColor: colors.accentOn,
+                          onChanged: !isLoading
+                              ? (val) => setState(() => _termsAccepted = val ?? false)
+                              : null,
+                        ),
                         Expanded(
-                          child: Text(
-                            authState.errorMessage!,
-                            style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
-                            textAlign: TextAlign.left,
+                          child: GestureDetector(
+                            onTap: !isLoading
+                                ? () => setState(() => _termsAccepted = !_termsAccepted)
+                                : null,
+                            child: Text(
+                              'I agree to the Terms and Privacy Policy',
+                              style: AppTextStyles.label.copyWith(
+                                color: colors.textSecondary,
+                                fontSize: 13.0,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: AppTokens.space16),
-              ],
+                    const SizedBox(height: AppTokens.space24),
 
-              // 1. Email
-              AppTextField(
-                label: 'Email',
-                hint: 'name@example.com',
-                controller: _emailController,
-                type: AppTextFieldType.email,
-                error: emailError,
-                enabled: !isLoading,
-              ),
-              const SizedBox(height: AppTokens.space16),
-
-              // 2. Password
-              AppTextField(
-                label: 'Password',
-                controller: _passwordController,
-                type: AppTextFieldType.password,
-                error: passwordError,
-                helper: _passwordController.text.isEmpty
-                    ? 'At least 8 characters.'
-                    : null,
-                enabled: !isLoading,
-              ),
-              const SizedBox(height: AppTokens.space16),
-
-              // 3. Display name
-              AppTextField(
-                label: 'Display name',
-                hint: 'Manager Name',
-                controller: _displayNameController,
-                error: nameError,
-                helper: nameError == null ? 'Use 2 to 32 characters.' : null,
-                maxLength: 32,
-                enabled: !isLoading,
-              ),
-              const SizedBox(height: AppTokens.space16),
-
-              // 4. Team ID
-              TeamIdField(
-                controller: _teamIdController,
-                enabled: !isLoading,
-                onResolved: (id) => setState(() => _resolvedTeamId = id),
-              ),
-              const SizedBox(height: AppTokens.space16),
-
-              // 5. Terms & Privacy Checkbox
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Checkbox(
-                    value: _termsAccepted,
-                    activeColor: AppTokens.goldPrimary,
-                    checkColor: AppTokens.bgBase,
-                    onChanged: isLoading
-                        ? null
-                        : (val) => setState(() => _termsAccepted = val ?? false),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: isLoading
-                          ? null
-                          : () => setState(() => _termsAccepted = !_termsAccepted),
-                      child: Text(
-                        'I agree to the Terms and Privacy Policy',
-                        style: AppTextStyles.body.copyWith(fontSize: 14.0),
-                      ),
+                    // Register button (C1)
+                    AppButton(
+                      label: 'Register',
+                      onPressed: _isFormValid && !isLoading ? _handleRegister : null,
+                      isLoading: isLoading,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppTokens.space24),
 
-              // 6. Submit Button
-              AppButton(
-                label: 'Create account',
-                onPressed: _isFormValid && !isLoading ? _handleRegister : null,
-                isLoading: isLoading,
-              ),
-              const SizedBox(height: AppTokens.space12),
+                    if (authState.errorMessage != null) ...[
+                      const SizedBox(height: AppTokens.space12),
+                      Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          authState.errorMessage!,
+                          style: AppTextStyles.label.copyWith(
+                            color: colors.statusError,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
 
-              // 7. Already have an account
-              AppButton(
-                label: 'Already have an account? Sign in',
-                variant: AppButtonVariant.tertiary,
-                onPressed: () => context.pop(),
+                    const SizedBox(height: AppTokens.space16),
+
+                    // Already have an account link
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'Already have an account? ',
+                          style: AppTextStyles.body.copyWith(
+                            color: colors.textSecondary,
+                            fontSize: 13.0,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: !isLoading ? () => context.go('/auth') : null,
+                          child: Text(
+                            'Sign In',
+                            style: AppTextStyles.body.copyWith(
+                              color: colors.accent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13.0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppTokens.space24),
-            ],
+            ),
           ),
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/error_mapper.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/error_state.dart';
@@ -74,15 +75,18 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
       }
     });
 
+    final colors = AppColors.of(context);
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final currentStepIndex = _getStepIndex(squadState.step);
     final progressFraction = (squadState.step == SquadLoadingStep.completed)
         ? 1.0
         : (currentStepIndex / 4.0).clamp(0.08, 1.0);
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
-        title: const Text('Loading your squad', style: AppTextStyles.title),
+        backgroundColor: colors.bgBase,
+        title: Text('Loading your squad', style: AppTextStyles.title.copyWith(color: colors.textPrimary)),
         automaticallyImplyLeading: false,
         actions: [
           if (_canCancel && squadState.isLoading)
@@ -90,9 +94,10 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
               onPressed: () {
                 context.pop();
               },
-              child: const Text('Cancel', style: TextStyle(color: AppTokens.textSecondary)),
+              child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
             ),
         ],
+        elevation: 0,
       ),
       body: SafeArea(
         child: Padding(
@@ -107,14 +112,14 @@ class _LoadSquadScreenState extends ConsumerState<LoadSquadScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                   child: TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 350),
+                    duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 350),
                     curve: Curves.easeInOut,
                     tween: Tween<double>(begin: 0.08, end: progressFraction),
                     builder: (context, value, _) => LinearProgressIndicator(
                       value: value,
                       minHeight: 6,
-                      backgroundColor: AppTokens.bgElevated,
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppTokens.neonPrimary),
+                      backgroundColor: colors.bgElevated,
+                      valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
                     ),
                   ),
                 ),

@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/tokens.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/disclosure_notice.dart';
+import '../../../core/widgets/glass_container.dart';
 import '../providers/auth_provider.dart';
 
+/// Sign In screen (/auth) per Visual Redesign Design Document §8.2 & Sprint R3.
+///
+/// Features centered glass form card, email/password fields, official Google Sign-in button,
+/// lockout banner, and verbatim legal non-affiliation disclaimer.
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -61,9 +67,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _handleGoogleSignIn() async {
-    // Scaffold for Google Sign-In button
-    // In emulator / real device with Google Play Services, invokes GoogleSignIn().signIn()
-    // For now, if mock or token provided:
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Google Sign-In initiated...')),
     );
@@ -71,202 +74,228 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.status == AuthStatus.loading;
     final isLocked = authState.status == AuthStatus.locked;
     final isFormValid = _isFormValid && !isLoading && !isLocked;
 
     String? lockoutText;
-    if (isLocked && authState.lockoutSeconds != null) {
-      final minutes = (authState.lockoutSeconds! / 60).ceil();
-      lockoutText = "Too many attempts. Try again in $minutes minutes.";
+    if (isLocked) {
+      if (authState.errorMessage != null && authState.errorMessage!.isNotEmpty) {
+        lockoutText = authState.errorMessage;
+      } else if (authState.lockoutSeconds != null) {
+        final m = authState.lockoutSeconds! ~/ 60;
+        final s = authState.lockoutSeconds! % 60;
+        final timeStr = '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+        lockoutText = "Too many attempts. Try again in $timeStr.";
+      }
     }
 
-    // Distinguish top-level banner (account deletion / session expired)
-    // from inline error under the form (wrong credentials / lockout / offline).
-    final isTopBanner = authState.errorMessage != null &&
-        (authState.errorMessage!.contains('scheduled for deletion') ||
-            authState.errorMessage!.contains('Please sign in again'));
-
-    final topBannerText = isTopBanner ? authState.errorMessage : null;
-    final inlineError = lockoutText ?? (!isTopBanner ? authState.errorMessage : null);
+    final inlineError = lockoutText ?? authState.errorMessage;
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: AppTokens.space48),
-                      // 1. Wordmark & Tagline
-                      const Center(
-                        child: Text(
-                          'FPL Lens',
-                          style: AppTextStyles.title,
-                        ),
-                      ),
-                      const SizedBox(height: AppTokens.space4),
-                      Center(
-                        child: Text(
-                          'Your FPL squad, calculated on your phone.',
-                          style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      const SizedBox(height: AppTokens.space24),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTokens.screenGutter,
+              vertical: AppTokens.space24,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Above card: Wordmark and Subtitle per §8.2
+                  Text(
+                    'FPL Lens',
+                    style: AppTextStyles.display.copyWith(
+                      color: colors.textPrimary,
+                      letterSpacing: -0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppTokens.space4),
+                  Text(
+                    'Deterministic Fantasy Premier League Intelligence',
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: colors.textSecondary,
+                      fontSize: 14.0,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppTokens.space24),
 
-                      // Top-level banner (e.g. account scheduled for deletion or session expired)
-                      if (topBannerText != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(AppTokens.space12),
-                          decoration: BoxDecoration(
-                            color: AppTokens.statusDoubtful.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(AppTokens.radiusInput),
-                            border: Border.all(color: AppTokens.statusDoubtful),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.info_outline, color: AppTokens.statusDoubtful, size: 20),
-                              const SizedBox(width: AppTokens.space8),
-                              Expanded(
-                                child: Text(
-                                  topBannerText,
-                                  style: AppTextStyles.caption.copyWith(color: AppTokens.textPrimary),
-                                  textAlign: TextAlign.left,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: AppTokens.space16),
-                      ],
-                      const SizedBox(height: AppTokens.space8),
-
-                      // 2. Form Fields
-                      AppTextField(
-                        label: 'Email',
-                        hint: 'name@example.com',
-                        controller: _emailController,
-                        type: AppTextFieldType.email,
-                        enabled: !isLoading && !isLocked,
-                      ),
-                      const SizedBox(height: AppTokens.space16),
-                      AppTextField(
-                        label: 'Password',
-                        controller: _passwordController,
-                        type: AppTextFieldType.password,
-                        enabled: !isLoading && !isLocked,
-                      ),
-                      const SizedBox(height: AppTokens.space8),
-
-                      // 3. Forgot Password
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: !isLoading && !isLocked
-                              ? () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Password reset instructions sent.")),
-                                  );
-                                }
-                              : null,
-                          child: Text(
-                            'Forgot password?',
-                            style: AppTextStyles.label.copyWith(color: AppTokens.neonPrimary),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppTokens.space8),
-
-                      // 4. Sign in primary button
-                      AppButton(
-                        label: 'Sign in',
-                        onPressed: isFormValid ? _handleSignIn : null,
-                        isLoading: isLoading,
-                      ),
-                      const SizedBox(height: AppTokens.space12),
-
-                      // Inline error under the form (not per field) for wrong credentials / lockout / offline
-                      if (inlineError != null) ...[
-                        Semantics(
-                          liveRegion: true,
-                          child: Container(
+                  // 2. Centered Glass Card per §8.2
+                  GlassContainer(
+                    blur: 20.0,
+                    borderRadius: BorderRadius.circular(AppTokens.radiusModal),
+                    padding: const EdgeInsets.all(AppTokens.space24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Lockout Banner inside card if active
+                        if (isLocked && lockoutText != null) ...[
+                          Container(
                             padding: const EdgeInsets.all(AppTokens.space12),
                             decoration: BoxDecoration(
-                              color: AppTokens.statusOut.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(AppTokens.radiusInput),
-                              border: Border.all(color: AppTokens.statusOut),
+                              color: colors.statusWarn.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(AppTokens.radiusBase),
+                              border: Border.all(color: colors.statusWarn),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline, size: 16.0, color: AppTokens.statusOut),
+                                Icon(Icons.timer_outlined, color: colors.statusWarn, size: 20),
                                 const SizedBox(width: AppTokens.space8),
                                 Expanded(
                                   child: Text(
-                                    inlineError,
-                                    style: AppTextStyles.caption.copyWith(color: AppTokens.statusOut),
-                                    textAlign: TextAlign.center,
+                                    lockoutText,
+                                    style: AppTextStyles.label.copyWith(
+                                      color: colors.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                        const SizedBox(height: AppTokens.space12),
-                      ],
-                      const SizedBox(height: AppTokens.space16),
+                          const SizedBox(height: AppTokens.space16),
+                        ],
 
-                      // 5. Divider with "or"
-                      Row(
-                        children: [
-                          const Expanded(child: Divider()),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppTokens.space12),
+                        // Email Field
+                        AppTextField(
+                          label: 'Email',
+                          hint: 'name@example.com',
+                          controller: _emailController,
+                          type: AppTextFieldType.email,
+                          enabled: !isLoading && !isLocked,
+                        ),
+                        const SizedBox(height: AppTokens.space16),
+
+                        // Password Field
+                        AppTextField(
+                          label: 'Password',
+                          controller: _passwordController,
+                          type: AppTextFieldType.password,
+                          enabled: !isLoading && !isLocked,
+                        ),
+                        const SizedBox(height: AppTokens.space8),
+
+                        // Forgot Password
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: !isLoading && !isLocked
+                                ? () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Password reset instructions sent.'),
+                                      ),
+                                    );
+                                  }
+                                : null,
                             child: Text(
-                              'or',
-                              style: AppTextStyles.caption.copyWith(color: AppTokens.textDisabled),
+                              'Forgot password?',
+                              style: AppTextStyles.label.copyWith(
+                                color: colors.accent,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                          const Expanded(child: Divider()),
+                        ),
+                        const SizedBox(height: AppTokens.space8),
+
+                        // Sign in primary button (C1)
+                        AppButton(
+                          label: 'Sign in',
+                          onPressed: isFormValid ? _handleSignIn : null,
+                          isLoading: isLoading,
+                        ),
+
+                        // Inline error message
+                        if (inlineError != null && !isLocked) ...[
+                          const SizedBox(height: AppTokens.space12),
+                          Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              inlineError,
+                              style: AppTextStyles.label.copyWith(
+                                color: colors.statusError,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ],
-                      ),
-                      const SizedBox(height: AppTokens.space16),
 
-                      // 6. Continue with Google
-                      AppButton(
-                        label: 'Continue with Google',
-                        variant: AppButtonVariant.secondary,
-                        onPressed: !isLoading && !isLocked ? _handleGoogleSignIn : null,
-                        leading: const Icon(Icons.account_circle, size: 20.0, color: AppTokens.textPrimary),
-                      ),
-                      const SizedBox(height: AppTokens.space12),
+                        const SizedBox(height: AppTokens.space16),
 
-                      // 7. Create account tertiary
-                      AppButton(
-                        label: 'Create account',
-                        variant: AppButtonVariant.tertiary,
-                        onPressed: () => context.push('/auth/register'),
-                      ),
+                        // Divider
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: colors.borderSubtle)),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: AppTokens.space8),
+                              child: Text(
+                                'or',
+                                style: AppTextStyles.caption.copyWith(color: colors.textDisabled),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: colors.borderSubtle)),
+                          ],
+                        ),
 
-                      const Spacer(),
-                      const SizedBox(height: AppTokens.space16),
+                        const SizedBox(height: AppTokens.space16),
 
-                      // 8. Disclaimer Notice
-                      const DisclosureNotice(),
-                      const SizedBox(height: AppTokens.space16),
-                    ],
+                        // Google Sign In (C2)
+                        AppButton(
+                          label: 'Continue with Google',
+                          variant: AppButtonVariant.secondary,
+                          leading: const Icon(Icons.g_mobiledata_rounded, size: 28),
+                          onPressed: !isLoading && !isLocked ? _handleGoogleSignIn : null,
+                        ),
+
+                        const SizedBox(height: AppTokens.space16),
+
+                        // Sign up link (C4)
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              "Don't have an account? ",
+                              style: AppTextStyles.body.copyWith(
+                                color: colors.textSecondary,
+                                fontSize: 13.0,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: !isLoading ? () => context.go('/auth/register') : null,
+                              child: Text(
+                                'Sign Up',
+                                style: AppTextStyles.body.copyWith(
+                                  color: colors.accent,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13.0,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+
+                  const SizedBox(height: AppTokens.space24),
+
+                  // 3. Verbatim Non-affiliation Disclaimer below card (§9.7)
+                  const DisclosureNotice(),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
