@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
@@ -92,9 +93,9 @@ class _AiKeySetupScreenState extends ConsumerState<AiKeySetupScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Key saved. Stored only on this phone.'),
-          backgroundColor: AppTokens.statusAvailable,
+        SnackBar(
+          content: const Text('Key saved. Stored only on this phone.'),
+          backgroundColor: AppColors.of(context).statusOk,
         ),
       );
 
@@ -135,6 +136,7 @@ class _AiKeySetupScreenState extends ConsumerState<AiKeySetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final aiState = ref.watch(aiKeyProvider);
     final hasStoredKey = aiState.isConfigured && !_isEditingKey;
 
@@ -143,12 +145,12 @@ class _AiKeySetupScreenState extends ConsumerState<AiKeySetupScreen> {
         (_keyController.text.trim().isNotEmpty);
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
-        backgroundColor: AppTokens.bgBase,
+        backgroundColor: colors.bgSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTokens.textPrimary),
+          icon: Icon(Icons.arrow_back, color: colors.textPrimary),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -159,7 +161,7 @@ class _AiKeySetupScreenState extends ConsumerState<AiKeySetupScreen> {
         ),
         title: Text(
           'AI key for screenshots',
-          style: AppTextStyles.title.copyWith(fontSize: 22.0),
+          style: AppTextStyles.title.copyWith(fontSize: 22.0, color: colors.textPrimary),
         ),
       ),
       body: SafeArea(
@@ -294,7 +296,7 @@ class _AiKeySetupScreenState extends ConsumerState<AiKeySetupScreen> {
                       child: Text(
                         'Replace key',
                         style: AppTextStyles.label.copyWith(
-                          color: AppTokens.neonPrimary,
+                          color: colors.accent,
                         ),
                       ),
                     ),
@@ -324,7 +326,7 @@ class _AiKeySetupScreenState extends ConsumerState<AiKeySetupScreen> {
                 child: Text(
                   'Draft wording',
                   style: AppTextStyles.caption.copyWith(
-                    color: AppTokens.textDisabled,
+                    color: colors.textDisabled,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -348,8 +350,8 @@ class _AiKeySetupScreenState extends ConsumerState<AiKeySetupScreen> {
                             _understandChecked = val ?? false;
                           });
                         },
-                        activeColor: AppTokens.goldPrimary,
-                        checkColor: AppTokens.bgBase,
+                        activeColor: colors.accent,
+                        checkColor: colors.accentOn,
                       ),
                       const SizedBox(width: AppTokens.space8),
                       Expanded(

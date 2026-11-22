@@ -65,7 +65,7 @@ class NotificationService {
                 const Icon(
                   Icons.notifications_active_outlined,
                   size: 48,
-                  color: AppTokens.goldPrimary,
+                  color: AppTokens.accent,
                 ),
                 const SizedBox(height: AppTokens.space16),
                 const Text(

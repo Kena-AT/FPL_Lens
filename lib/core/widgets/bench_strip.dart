@@ -10,15 +10,19 @@ import 'player_chip.dart';
 class BenchStrip extends StatelessWidget {
   final List<PlayerCandidate> benchPlayers; // Expected length: 4
   final int? selectedPlayerId;
+  final int? substitutingPlayerId;
   final ValueChanged<PlayerCandidate>? onPlayerTap;
   final ValueChanged<PlayerCandidate>? onPlayerLongPress;
+  final void Function(PlayerCandidate incoming, PlayerCandidate target)? onPlayerSwap;
 
   const BenchStrip({
     super.key,
     required this.benchPlayers,
     this.selectedPlayerId,
+    this.substitutingPlayerId,
     this.onPlayerTap,
     this.onPlayerLongPress,
+    this.onPlayerSwap,
   });
 
   @override
@@ -103,9 +107,11 @@ class BenchStrip extends StatelessWidget {
                   if (player != null)
                     PlayerChip(
                       player: player,
-                      isSelected: selectedPlayerId == player.fplId,
+                      isSelected: selectedPlayerId == player.fplId || substitutingPlayerId == player.fplId,
+                      isSwapCandidate: substitutingPlayerId != null && substitutingPlayerId != player.fplId,
                       onTap: () => onPlayerTap?.call(player),
                       onLongPress: () => onPlayerLongPress?.call(player),
+                      onAcceptDrop: (incoming) => onPlayerSwap?.call(incoming, player),
                     )
                   else
                     Container(

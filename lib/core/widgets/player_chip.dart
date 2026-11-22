@@ -11,8 +11,10 @@ class PlayerChip extends StatelessWidget {
   final bool isCaptain;
   final bool isViceCaptain;
   final bool isSelected;
+  final bool isSwapCandidate;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final ValueChanged<PlayerCandidate>? onAcceptDrop;
 
   const PlayerChip({
     super.key,
@@ -20,8 +22,10 @@ class PlayerChip extends StatelessWidget {
     this.isCaptain = false,
     this.isViceCaptain = false,
     this.isSelected = false,
+    this.isSwapCandidate = false,
     this.onTap,
     this.onLongPress,
+    this.onAcceptDrop,
   });
 
   @override
@@ -29,7 +33,7 @@ class PlayerChip extends StatelessWidget {
     final colors = AppColors.of(context);
     final priceStr = '£${(player.priceTenths / 10.0).toStringAsFixed(1)}m';
 
-    return Material(
+    final chipContent = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
@@ -39,17 +43,21 @@ class PlayerChip extends StatelessWidget {
           width: 72.0,
           padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
           decoration: BoxDecoration(
-            color: isSelected
-                ? colors.accent.withValues(alpha: 0.2)
-                : colors.bgElevated.withValues(alpha: 0.85),
+            color: isSwapCandidate
+                ? colors.statusWarn.withValues(alpha: 0.25)
+                : isSelected
+                    ? colors.accent.withValues(alpha: 0.2)
+                    : colors.bgElevated.withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(AppTokens.radiusChip),
             border: Border.all(
-              color: isSelected
-                  ? colors.accent
-                  : isCaptain
+              color: isSwapCandidate
+                  ? colors.statusWarn
+                  : isSelected
                       ? colors.accent
-                      : colors.borderSubtle,
-              width: isCaptain || isSelected ? 1.5 : 1.0,
+                      : isCaptain
+                          ? colors.accent
+                          : colors.borderSubtle,
+              width: isSwapCandidate || isCaptain || isSelected ? 1.5 : 1.0,
             ),
             boxShadow: [
               BoxShadow(
@@ -141,6 +149,56 @@ class PlayerChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    return DragTarget<PlayerCandidate>(
+      onWillAcceptWithDetails: (details) => details.data.fplId != player.fplId,
+      onAcceptWithDetails: (details) => onAcceptDrop?.call(details.data),
+      builder: (context, candidateData, rejectedData) {
+        return LongPressDraggable<PlayerCandidate>(
+          data: player,
+          feedback: Material(
+            color: Colors.transparent,
+            child: Opacity(
+              opacity: 0.88,
+              child: Container(
+                width: 76.0,
+                padding: const EdgeInsets.all(4.0),
+                decoration: BoxDecoration(
+                  color: colors.bgElevated,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusChip),
+                  border: Border.all(color: colors.accent, width: 2.0),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black45, blurRadius: 8.0, offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      player.webName,
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${player.xp} xP',
+                      style: TextStyle(color: colors.accent, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          childWhenDragging: Opacity(
+            opacity: 0.35,
+            child: chipContent,
+          ),
+          child: chipContent,
+        );
+      },
     );
   }
 

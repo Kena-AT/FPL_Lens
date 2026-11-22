@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
@@ -22,7 +23,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   bool _deadlineReminders = true;
   bool _injuryAlerts = true;
   int _selectedHours = 6;
-  bool _permissionDenied = false;
+  final bool _permissionDenied = false;
 
   final List<int> _timingOptions = const [1, 3, 6, 12, 24];
 
@@ -87,17 +88,21 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
-        title: const Text('Notifications', style: AppTextStyles.title),
+        backgroundColor: colors.bgSurface,
+        elevation: 0,
+        title: Text('Notifications', style: AppTextStyles.title.copyWith(color: colors.textPrimary)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTokens.textPrimary),
+          icon: Icon(Icons.arrow_back, color: colors.textPrimary),
           onPressed: () => context.pop(),
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTokens.neonPrimary))
+          ? Center(child: CircularProgressIndicator(color: colors.accent))
           : SafeArea(
               child: ListView(
                 padding: const EdgeInsets.symmetric(
@@ -111,43 +116,45 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       margin: const EdgeInsets.only(bottom: AppTokens.space16),
                       padding: const EdgeInsets.all(AppTokens.space12),
                       decoration: BoxDecoration(
-                        color: AppTokens.statusDoubtful.withValues(alpha: 0.15),
+                        color: colors.statusWarn.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                        border: Border.all(color: AppTokens.statusDoubtful),
+                        border: Border.all(color: colors.statusWarn),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.notifications_off_outlined, color: AppTokens.statusDoubtful, size: 20),
+                              Icon(
+                                Icons.notifications_off_outlined,
+                                color: colors.statusWarn,
+                                size: 20.0,
+                              ),
                               const SizedBox(width: AppTokens.space8),
                               Expanded(
                                 child: Text(
-                                  'Notifications are off in Android settings.',
-                                  style: AppTextStyles.label.copyWith(color: AppTokens.statusDoubtful),
+                                  'Notifications are blocked',
+                                  style: AppTextStyles.label.copyWith(
+                                    color: colors.statusWarn,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8.0),
-                          const Text(
-                            'Turn them on in Android settings to get deadline reminders and injury alerts.',
-                            style: AppTextStyles.caption,
+                          const SizedBox(height: AppTokens.space4),
+                          Text(
+                            'Allow notifications in your phone\'s settings to get deadline reminders.',
+                            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
                           ),
-                          const SizedBox(height: 8.0),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: AppButton(
-                              label: 'Open settings',
-                              variant: AppButtonVariant.tertiary,
-                              onPressed: () {
-                                // Request rationale trigger
-                                setState(() {
-                                  _permissionDenied = false;
-                                });
-                              },
-                            ),
+                          const SizedBox(height: AppTokens.space8),
+                          AppButton(
+                            label: 'Open Settings',
+                            variant: AppButtonVariant.secondary,
+                            size: AppButtonSize.medium,
+                            onPressed: () {
+                              // Deep-link to app notification settings
+                            },
                           ),
                         ],
                       ),
@@ -158,36 +165,37 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   Text(
                     'DEADLINE REMINDERS',
                     style: AppTextStyles.label.copyWith(
-                      color: AppTokens.textDisabled,
+                      color: colors.textDisabled,
                       fontSize: 12.0,
                       letterSpacing: 1.2,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: AppTokens.space8),
                   Material(
-                    color: AppTokens.bgSurface,
+                    color: colors.bgSurface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                      side: const BorderSide(color: AppTokens.borderSubtle),
+                      side: BorderSide(color: colors.borderSubtle),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
                         SwitchListTile(
-                          title: const Text('Remind me before deadline', style: AppTextStyles.body),
+                          title: Text('Remind me before deadline', style: AppTextStyles.body.copyWith(color: colors.textPrimary)),
                           subtitle: Text(
                             'Receive notifications before each gameweek deadline lock.',
-                            style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+                            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
                           ),
                           value: _deadlineReminders,
-                          activeThumbColor: AppTokens.goldPrimary,
+                          activeThumbColor: colors.accent,
                           onChanged: (val) {
                             setState(() => _deadlineReminders = val);
                             _savePreferences();
                           },
                         ),
                         if (_deadlineReminders) ...[
-                          const Divider(height: 1.0, color: AppTokens.borderSubtle),
+                          Divider(height: 1.0, color: colors.borderSubtle),
                           Padding(
                             padding: const EdgeInsets.all(AppTokens.space12),
                             child: Column(
@@ -196,7 +204,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                 Text(
                                   'Reminder timing',
                                   style: AppTextStyles.label.copyWith(
-                                    color: AppTokens.textSecondary,
+                                    color: colors.textSecondary,
                                     fontSize: 11.5,
                                   ),
                                 ),
@@ -209,14 +217,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                     return ChoiceChip(
                                       label: Text('$hours ${hours == 1 ? "hour" : "hours"}'),
                                       selected: isSelected,
-                                      selectedColor: AppTokens.neonPrimary.withValues(alpha: 0.25),
-                                      backgroundColor: AppTokens.bgElevated,
+                                      selectedColor: colors.accentSoft,
+                                      backgroundColor: colors.bgElevated,
                                       labelStyle: AppTextStyles.label.copyWith(
-                                        color: isSelected ? AppTokens.neonPrimary : AppTokens.textSecondary,
+                                        color: isSelected ? colors.accent : colors.textSecondary,
                                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                                       ),
                                       side: BorderSide(
-                                        color: isSelected ? AppTokens.neonPrimary : AppTokens.borderSubtle,
+                                        color: isSelected ? colors.accent : colors.borderSubtle,
                                       ),
                                       onSelected: (selected) {
                                         if (selected) {
@@ -241,27 +249,28 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   Text(
                     'INJURY ALERTS',
                     style: AppTextStyles.label.copyWith(
-                      color: AppTokens.textDisabled,
+                      color: colors.textDisabled,
                       fontSize: 12.0,
                       letterSpacing: 1.2,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: AppTokens.space8),
                   Material(
-                    color: AppTokens.bgSurface,
+                    color: colors.bgSurface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                      side: const BorderSide(color: AppTokens.borderSubtle),
+                      side: BorderSide(color: colors.borderSubtle),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: SwitchListTile(
-                      title: const Text('Squad injury & status alerts', style: AppTextStyles.body),
+                      title: Text('Squad injury & status alerts', style: AppTextStyles.body.copyWith(color: colors.textPrimary)),
                       subtitle: Text(
-                        'Tell me when a player in my squad is injured, suspended, or doubtful. Alerts use official FPL status [DECIDED pending A7].',
-                        style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+                        'Tell me when a player in my squad is injured, suspended, or doubtful.',
+                        style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
                       ),
                       value: _injuryAlerts,
-                      activeThumbColor: AppTokens.goldPrimary,
+                      activeThumbColor: colors.accent,
                       onChanged: (val) {
                         setState(() => _injuryAlerts = val);
                         _savePreferences();
@@ -271,7 +280,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
                   if (_isSaving) ...[
                     const SizedBox(height: AppTokens.space16),
-                    const Center(
+                    Center(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -280,11 +289,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                             height: 14.0,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.0,
-                              color: AppTokens.neonPrimary,
+                              color: colors.accent,
                             ),
                           ),
-                          SizedBox(width: 8.0),
-                          Text('Saving preferences...', style: AppTextStyles.caption),
+                          const SizedBox(width: AppTokens.space8),
+                          Text(
+                            'Saving preferences...',
+                            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
+                          ),
                         ],
                       ),
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/football_pitch_background.dart';
 import '../../squad/screens/squad_screen.dart';
 import '../../squad/providers/squad_provider.dart';
 import 'home_screen.dart';
@@ -45,9 +46,11 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> {
 
     return Scaffold(
       backgroundColor: colors.bgBase,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+      body: FootballPitchBackground(
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
+        ),
       ),
       bottomNavigationBar: Container(
         height: 64,

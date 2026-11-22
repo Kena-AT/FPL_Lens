@@ -11,8 +11,10 @@ class PitchView extends StatelessWidget {
   final PlayerCandidate? captain;
   final PlayerCandidate? viceCaptain;
   final int? selectedPlayerId;
+  final int? substitutingPlayerId;
   final ValueChanged<PlayerCandidate>? onPlayerTap;
   final ValueChanged<PlayerCandidate>? onPlayerLongPress;
+  final void Function(PlayerCandidate incoming, PlayerCandidate target)? onPlayerSwap;
 
   const PitchView({
     super.key,
@@ -20,8 +22,10 @@ class PitchView extends StatelessWidget {
     this.captain,
     this.viceCaptain,
     this.selectedPlayerId,
+    this.substitutingPlayerId,
     this.onPlayerTap,
     this.onPlayerLongPress,
+    this.onPlayerSwap,
   });
 
   @override
@@ -77,13 +81,17 @@ class PitchView extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: players.map((p) {
+        final isSubCandidate = substitutingPlayerId != null && substitutingPlayerId != p.fplId;
+
         return PlayerChip(
           player: p,
           isCaptain: captain?.fplId == p.fplId,
           isViceCaptain: viceCaptain?.fplId == p.fplId,
-          isSelected: selectedPlayerId == p.fplId,
+          isSelected: selectedPlayerId == p.fplId || substitutingPlayerId == p.fplId,
+          isSwapCandidate: isSubCandidate,
           onTap: () => onPlayerTap?.call(p),
           onLongPress: () => onPlayerLongPress?.call(p),
+          onAcceptDrop: (incoming) => onPlayerSwap?.call(incoming, p),
         );
       }).toList(),
     );

@@ -49,13 +49,19 @@ class HomeScreen extends ConsumerWidget {
         : (totalSquadValueTenths > 0 ? totalSquadValueTenths : 1000);
 
     return Scaffold(
-      backgroundColor: colors.bgBase,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: colors.bgBase,
+        toolbarHeight: 68.0,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        titleSpacing: AppTokens.screenGutter,
         title: Text(
           'Home',
-          style: AppTextStyles.title.copyWith(color: colors.textPrimary),
+          style: AppTextStyles.title.copyWith(
+            fontSize: 24.0,
+            fontWeight: FontWeight.w800,
+            color: colors.textPrimary,
+          ),
         ),
         actions: [
           IconButton(
@@ -68,6 +74,7 @@ class HomeScreen extends ConsumerWidget {
             tooltip: 'Settings',
             onPressed: () => context.push('/settings'),
           ),
+          const SizedBox(width: AppTokens.space8),
         ],
       ),
       body: RefreshIndicator(
@@ -88,10 +95,57 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(
             horizontal: AppTokens.screenGutter,
-            vertical: AppTokens.space16,
+            vertical: AppTokens.space12,
           ),
           children: [
-            // 1. Unconfirmed prices banner if any need confirming (§8.7 C12)
+            // 1. Top Quick Actions Horizontal Bar (spaced perfectly across screen, no header text)
+            Container(
+              margin: const EdgeInsets.only(bottom: AppTokens.space12),
+              padding: const EdgeInsets.all(AppTokens.space4),
+              decoration: BoxDecoration(
+                color: colors.bgSurface.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(AppTokens.radiusCard),
+                border: Border.all(color: colors.borderSubtle, width: 1.0),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildActionTab(
+                      label: 'Squad',
+                      icon: Icons.groups_outlined,
+                      onTap: () => context.go('/squad'),
+                      colors: colors,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildActionTab(
+                      label: 'History',
+                      icon: Icons.history_rounded,
+                      onTap: () => context.push('/history'),
+                      colors: colors,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildActionTab(
+                      label: 'Prices',
+                      icon: Icons.payments_outlined,
+                      onTap: () => context.push('/squad/prices'),
+                      colors: colors,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildActionTab(
+                      label: 'Transfer Lab',
+                      icon: Icons.swap_horiz_rounded,
+                      onTap: () => context.go('/transfers'),
+                      colors: colors,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 2. Unconfirmed prices banner if any need confirming (§8.7 C12)
             if (squadState.unconfirmedCount > 0) ...[
               Semantics(
                 button: true,
@@ -139,13 +193,13 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: AppTokens.space16),
+              const SizedBox(height: AppTokens.space12),
             ],
 
             // 2. Hero Gameweek Deadline Card (2x2 Layered Bento Hero per §8.7 C6)
             GlassContainer(
               blur: 20.0,
-              padding: const EdgeInsets.all(AppTokens.space24),
+              padding: const EdgeInsets.all(AppTokens.space16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -171,14 +225,36 @@ class HomeScreen extends ConsumerWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: AppTokens.space12),
-                  StatBadge(
-                    value: countdownStr,
-                    label: 'DEADLINE COUNTDOWN',
-                    size: StatBadgeSize.hero,
-                    accented: true,
+                  const SizedBox(height: AppTokens.space8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'DEADLINE COUNTDOWN',
+                        style: AppTextStyles.label.copyWith(
+                          color: colors.textSecondary,
+                          fontSize: 11.0,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          countdownStr,
+                          style: AppTextStyles.numeric.copyWith(
+                            fontSize: 32.0,
+                            fontWeight: FontWeight.w800,
+                            color: colors.accent,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppTokens.space16),
+                  const SizedBox(height: AppTokens.space8),
                   Align(
                     alignment: Alignment.centerRight,
                     child: FreshnessLabel(
@@ -188,7 +264,7 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppTokens.space16),
+            const SizedBox(height: AppTokens.space12),
 
             // 3. Three 1x1 Modular Bento Metric Tiles (§8.7 C7)
             LayoutBuilder(
@@ -247,13 +323,13 @@ class HomeScreen extends ConsumerWidget {
                 );
               },
             ),
-            const SizedBox(height: AppTokens.space16),
+            const SizedBox(height: AppTokens.space12),
 
             // 4. 2x1 Projection Bento Tile (§8.7 C7)
             CardContainer(
               variant: CardVariant.surface,
               accentRing: squadState.squad.isNotEmpty,
-              padding: const EdgeInsets.all(AppTokens.space24),
+              padding: const EdgeInsets.all(AppTokens.space16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -276,11 +352,51 @@ class HomeScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AppTokens.space12),
-                  StatBadge(
-                    value: squadState.squad.isNotEmpty ? '64.8' : '--',
-                    unit: squadState.squad.isNotEmpty ? 'xP' : null,
-                    label: 'SOLVER PROJECTED ROUND POINTS',
-                    size: StatBadgeSize.hero,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SOLVER PROJECTED ROUND POINTS',
+                        style: AppTextStyles.label.copyWith(
+                          color: colors.textSecondary,
+                          fontSize: 11.0,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              squadState.squad.isNotEmpty ? '64.8' : '--',
+                              style: AppTextStyles.numeric.copyWith(
+                                fontSize: 32.0,
+                                fontWeight: FontWeight.w800,
+                                color: colors.textPrimary,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            if (squadState.squad.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                'xP',
+                                style: AppTextStyles.label.copyWith(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: colors.accent,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppTokens.space16),
                   AppButton(
@@ -293,47 +409,6 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppTokens.space24),
-
-            // 5. Quick Access Action Chips (§8.7 C8)
-            Text(
-              'QUICK ACTIONS',
-              style: AppTextStyles.caption.copyWith(
-                color: colors.textDisabled,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-              ),
-            ),
-            const SizedBox(height: AppTokens.space12),
-            Wrap(
-              spacing: AppTokens.space8,
-              runSpacing: AppTokens.space8,
-              children: [
-                _buildActionChip(
-                  label: 'Squad',
-                  icon: Icons.groups_outlined,
-                  onTap: () => context.go('/squad'),
-                  colors: colors,
-                ),
-                _buildActionChip(
-                  label: 'History',
-                  icon: Icons.history_rounded,
-                  onTap: () => context.push('/history'),
-                  colors: colors,
-                ),
-                _buildActionChip(
-                  label: 'Prices',
-                  icon: Icons.payments_outlined,
-                  onTap: () => context.push('/squad/prices'),
-                  colors: colors,
-                ),
-                _buildActionChip(
-                  label: 'Transfer Lab',
-                  icon: Icons.swap_horiz_rounded,
-                  onTap: () => context.go('/transfers'),
-                  colors: colors,
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -365,7 +440,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionChip({
+  Widget _buildActionTab({
     required String label,
     required IconData icon,
     required VoidCallback onTap,
@@ -375,34 +450,26 @@ class HomeScreen extends ConsumerWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+        borderRadius: BorderRadius.circular(AppTokens.radiusBase),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppTokens.space16,
-            vertical: AppTokens.space8,
-          ),
-          decoration: BoxDecoration(
-            color: colors.bgSurface,
-            borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-            border: Border.all(
-              color: colors.borderSubtle,
-              width: 1.0,
-            ),
-          ),
-          child: Row(
+          height: 54.0,
+          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 16.0,
-                color: colors.accent,
-              ),
-              const SizedBox(width: AppTokens.space8),
-              Text(
-                label,
-                style: AppTextStyles.label.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w600,
+              Icon(icon, size: 20.0, color: colors.accent),
+              const SizedBox(height: 3.0),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: AppTextStyles.label.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11.0,
+                  ),
                 ),
               ),
             ],

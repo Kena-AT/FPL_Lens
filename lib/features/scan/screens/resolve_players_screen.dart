@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/storage/app_database.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
@@ -53,69 +54,47 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
 
   Future<void> _handleConfirmAndContinue() async {
     final companions = <SquadPlayersTableCompanion>[];
-
     int playerOrder = 1;
 
-    for (final player in _allPlayers) {
+    for (int i = 0; i < _allPlayers.length; i++) {
+      final player = _allPlayers[i];
+      CandidateMatch? candidate;
+
       if (player.isStrongMatch) {
-        final c = player.candidates.isNotEmpty ? player.candidates.first : null;
-        final fplId = player.bestMatchFplId ?? c?.fplId ?? (9000 + playerOrder);
-        final webName = c?.webName ?? player.rawName;
-        final pos = c?.position ?? (player.slot ?? 'MID');
-        final team = c?.teamShortName ?? 'PL';
-        final nowCost = c?.nowCostTenths ?? 60;
-
-        companions.add(
-          SquadPlayersTableCompanion(
-            fplId: drift.Value(fplId),
-            webName: drift.Value(webName),
-            position: drift.Value(pos),
-            teamId: drift.Value(c?.teamFplId ?? 1),
-            teamShortName: drift.Value(team),
-            purchasePriceTenths: drift.Value(nowCost),
-            sellingPriceTenths: drift.Value(nowCost),
-            nowCostTenths: drift.Value(nowCost),
-            status: const drift.Value('a'),
-            chanceOfPlayingNextRound: const drift.Value(100),
-            isCaptain: drift.Value(playerOrder == 1),
-            isViceCaptain: drift.Value(playerOrder == 2),
-            multiplier: drift.Value(playerOrder == 1 ? 2 : 1),
-            positionOrder: drift.Value(playerOrder),
-            priceSource: const drift.Value('CONFIRM'),
-            updatedAt: drift.Value(DateTime.now()),
-          ),
-        );
+        candidate = player.candidates.isNotEmpty ? player.candidates.first : null;
       } else {
-        final unclearIdx = _unclearPlayers.indexOf(player);
-        final chosen = _selections[unclearIdx];
-
-        final fplId = chosen?.fplId ?? (9000 + playerOrder);
-        final webName = chosen?.webName ?? player.rawName;
-        final pos = chosen?.position ?? (player.slot ?? 'MID');
-        final team = chosen?.teamShortName ?? 'PL';
-        final nowCost = chosen?.nowCostTenths ?? 60;
-
-        companions.add(
-          SquadPlayersTableCompanion(
-            fplId: drift.Value(fplId),
-            webName: drift.Value(webName),
-            position: drift.Value(pos),
-            teamId: drift.Value(chosen?.teamFplId ?? 1),
-            teamShortName: drift.Value(team),
-            purchasePriceTenths: drift.Value(nowCost),
-            sellingPriceTenths: drift.Value(nowCost),
-            nowCostTenths: drift.Value(nowCost),
-            status: const drift.Value('a'),
-            chanceOfPlayingNextRound: const drift.Value(100),
-            isCaptain: drift.Value(playerOrder == 1),
-            isViceCaptain: drift.Value(playerOrder == 2),
-            multiplier: drift.Value(playerOrder == 1 ? 2 : 1),
-            positionOrder: drift.Value(playerOrder),
-            priceSource: const drift.Value('CONFIRM'),
-            updatedAt: drift.Value(DateTime.now()),
-          ),
-        );
+        final unclearIndex = _unclearPlayers.indexOf(player);
+        if (unclearIndex != -1) {
+          candidate = _selections[unclearIndex];
+        }
       }
+
+      final fplId = candidate?.fplId ?? player.bestMatchFplId ?? (9000 + playerOrder);
+      final webName = candidate?.webName ?? player.rawName;
+      final pos = candidate?.position ?? (player.slot ?? 'MID');
+      final team = candidate?.teamShortName ?? 'PL';
+      final nowCost = candidate?.nowCostTenths ?? 60;
+
+      companions.add(
+        SquadPlayersTableCompanion(
+          fplId: drift.Value(fplId),
+          webName: drift.Value(webName),
+          position: drift.Value(pos),
+          teamId: drift.Value(candidate?.teamFplId ?? 1),
+          teamShortName: drift.Value(team),
+          purchasePriceTenths: drift.Value(nowCost),
+          sellingPriceTenths: drift.Value(nowCost),
+          nowCostTenths: drift.Value(nowCost),
+          status: const drift.Value('a'),
+          chanceOfPlayingNextRound: const drift.Value(100),
+          isCaptain: drift.Value(playerOrder == 1),
+          isViceCaptain: drift.Value(playerOrder == 2),
+          multiplier: drift.Value(playerOrder == 1 ? 2 : 1),
+          positionOrder: drift.Value(playerOrder),
+          priceSource: const drift.Value('CONFIRM'),
+          updatedAt: drift.Value(DateTime.now()),
+        ),
+      );
       playerOrder++;
     }
 
@@ -128,15 +107,17 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     if (_unclearPlayers.isEmpty) {
       // Nothing unclear, proceed directly
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _handleConfirmAndContinue();
       });
-      return const Scaffold(
-        backgroundColor: AppTokens.bgBase,
+      return Scaffold(
+        backgroundColor: colors.bgBase,
         body: Center(
-          child: CircularProgressIndicator(color: AppTokens.goldPrimary),
+          child: CircularProgressIndicator(color: colors.accent),
         ),
       );
     }
@@ -149,12 +130,12 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
     final positionLabel = current.slot != null ? 'Slot: ${current.slot}' : 'Unassigned slot';
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
-        backgroundColor: AppTokens.bgBase,
+        backgroundColor: colors.bgBase,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTokens.textPrimary),
+          icon: Icon(Icons.arrow_back, color: colors.textPrimary),
           onPressed: () {
             if (_currentIndex > 0) {
               setState(() => _currentIndex--);
@@ -165,7 +146,7 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
         ),
         title: Text(
           'Confirm players',
-          style: AppTextStyles.headline.copyWith(fontSize: 18.0),
+          style: AppTextStyles.headline.copyWith(fontSize: 18.0, color: colors.textPrimary),
         ),
         actions: [
           Padding(
@@ -173,7 +154,7 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
             child: Center(
               child: Text(
                 '${_currentIndex + 1} of $totalCount',
-                style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+                style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
               ),
             ),
           ),
@@ -193,9 +174,9 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppTokens.space16),
                 decoration: BoxDecoration(
-                  color: AppTokens.bgSurface,
+                  color: colors.bgSurface,
                   borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                  border: Border.all(color: AppTokens.borderSubtle),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,7 +184,7 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                     Text(
                       'READ FROM SCREENSHOT',
                       style: AppTextStyles.label.copyWith(
-                        color: AppTokens.textDisabled,
+                        color: colors.textDisabled,
                         fontSize: 11,
                         letterSpacing: 1.1,
                       ),
@@ -212,7 +193,7 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                     Text(
                       current.rawName,
                       style: AppTextStyles.headline.copyWith(
-                        color: AppTokens.textPrimary,
+                        color: colors.textPrimary,
                         fontSize: 20,
                       ),
                     ),
@@ -220,7 +201,7 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                     Text(
                       positionLabel,
                       style: AppTextStyles.caption.copyWith(
-                        color: AppTokens.neonPrimary,
+                        color: colors.accent,
                       ),
                     ),
                   ],
@@ -231,7 +212,7 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
               Text(
                 'SELECT MATCHING PLAYER',
                 style: AppTextStyles.label.copyWith(
-                  color: AppTokens.textDisabled,
+                  color: colors.textDisabled,
                   fontSize: 12,
                   letterSpacing: 1.1,
                 ),
@@ -246,14 +227,14 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                       Container(
                         padding: const EdgeInsets.all(AppTokens.space16),
                         decoration: BoxDecoration(
-                          color: AppTokens.bgSurface,
+                          color: colors.bgSurface,
                           borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                          border: Border.all(color: AppTokens.borderSubtle),
+                          border: Border.all(color: colors.borderSubtle),
                         ),
                         child: Text(
                           "We couldn't match this name. Choose 'None of these'.",
                           style: AppTextStyles.body.copyWith(
-                            color: AppTokens.textSecondary,
+                            color: colors.textSecondary,
                             fontSize: 14,
                           ),
                         ),
@@ -261,7 +242,7 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                     else
                       ...current.candidates.map((candidate) {
                         final isSelected = selectedCandidate?.fplId == candidate.fplId;
-                        return _buildCandidateRow(candidate, isSelected);
+                        return _buildCandidateRow(candidate, isSelected, colors);
                       }),
                     const SizedBox(height: AppTokens.space12),
 
@@ -281,10 +262,10 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                             vertical: AppTokens.space12,
                           ),
                           decoration: BoxDecoration(
-                            color: isNoneOfThese ? AppTokens.bgElevated : Colors.transparent,
+                            color: isNoneOfThese ? colors.bgElevated : Colors.transparent,
                             borderRadius: BorderRadius.circular(AppTokens.radiusCard),
                             border: Border.all(
-                              color: isNoneOfThese ? AppTokens.neonPrimary : AppTokens.borderSubtle,
+                              color: isNoneOfThese ? colors.accent : colors.borderSubtle,
                               width: isNoneOfThese ? 1.5 : 1.0,
                             ),
                           ),
@@ -295,13 +276,13 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                                     ? Icons.radio_button_checked
                                     : Icons.radio_button_unchecked,
                                 size: 20,
-                                color: isNoneOfThese ? AppTokens.neonPrimary : AppTokens.textDisabled,
+                                color: isNoneOfThese ? colors.accent : colors.textDisabled,
                               ),
                               const SizedBox(width: AppTokens.space12),
                               Text(
                                 'None of these (manual entry later)',
                                 style: AppTextStyles.body.copyWith(
-                                  color: isNoneOfThese ? AppTokens.neonPrimary : AppTokens.textSecondary,
+                                  color: isNoneOfThese ? colors.accent : colors.textSecondary,
                                   fontSize: 14,
                                 ),
                               ),
@@ -356,15 +337,15 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
     );
   }
 
-  Widget _buildCandidateRow(CandidateMatch candidate, bool isSelected) {
-    Color confidenceColor = AppTokens.statusAvailable;
+  Widget _buildCandidateRow(CandidateMatch candidate, bool isSelected, AppColors colors) {
+    Color confidenceColor = colors.statusOk;
     String matchLabel = 'Strong match';
 
     if (candidate.confidence < 0.60) {
-      confidenceColor = AppTokens.statusOut;
+      confidenceColor = colors.statusError;
       matchLabel = 'Weak match';
     } else if (candidate.confidence < 0.85) {
-      confidenceColor = AppTokens.statusDoubtful;
+      confidenceColor = colors.statusWarn;
       matchLabel = 'Possible match';
     }
 
@@ -382,10 +363,10 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
           child: Container(
             padding: const EdgeInsets.all(AppTokens.space12),
             decoration: BoxDecoration(
-              color: AppTokens.bgSurface,
+              color: colors.bgSurface,
               borderRadius: BorderRadius.circular(AppTokens.radiusCard),
               border: Border.all(
-                color: isSelected ? AppTokens.neonPrimary : AppTokens.borderSubtle,
+                color: isSelected ? colors.accent : colors.borderSubtle,
                 width: isSelected ? 1.5 : 1.0,
               ),
             ),
@@ -394,7 +375,7 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                 Icon(
                   isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
                   size: 20,
-                  color: isSelected ? AppTokens.neonPrimary : AppTokens.textDisabled,
+                  color: isSelected ? colors.accent : colors.textDisabled,
                 ),
                 const SizedBox(width: AppTokens.space12),
                 Expanded(
@@ -405,14 +386,14 @@ class _ResolvePlayersScreenState extends ConsumerState<ResolvePlayersScreen> {
                         candidate.webName,
                         style: AppTextStyles.headline.copyWith(
                           fontSize: 16,
-                          color: AppTokens.textPrimary,
+                          color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${candidate.teamShortName} • ${candidate.position} • £${(candidate.nowCostTenths / 10).toStringAsFixed(1)}m',
                         style: AppTextStyles.caption.copyWith(
-                          color: AppTokens.textSecondary,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ],

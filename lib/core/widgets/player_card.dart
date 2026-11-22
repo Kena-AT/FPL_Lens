@@ -179,7 +179,7 @@ class PlayerCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
-                              color: AppTokens.goldPrimary,
+                              color: AppTokens.accent,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
@@ -187,7 +187,7 @@ class PlayerCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: AppTokens.bgBase,
+                                color: AppTokens.accentOn,
                               ),
                             ),
                           ),

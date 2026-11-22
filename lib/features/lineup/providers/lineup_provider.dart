@@ -312,6 +312,182 @@ class LineupNotifier extends StateNotifier<LineupState> {
     optimize();
   }
 
+  /// Swaps two players between starting XI and bench (or bench reorder),
+  /// validating real FPL formation rules (min 1 GK, 3 DEF, 2 MID, 1 FWD).
+  bool swapPlayers(int playerAId, int playerBId) {
+    if (state.result == null || playerAId == playerBId) return false;
+
+    final startingXi = List<PlayerCandidate>.from(state.result!.startingXi);
+    final bench = List<PlayerCandidate>.from(state.result!.bench);
+
+    final aInStarting = startingXi.indexWhere((p) => p.fplId == playerAId);
+    final aInBench = bench.indexWhere((p) => p.fplId == playerAId);
+    final bInStarting = startingXi.indexWhere((p) => p.fplId == playerBId);
+    final bInBench = bench.indexWhere((p) => p.fplId == playerBId);
+
+    // Case 1: Swap Starter and Bench player
+    if (aInStarting != -1 && bInBench != -1) {
+      final pA = startingXi[aInStarting];
+      final pB = bench[bInBench];
+
+      // Goalkeepers can only be swapped with Goalkeepers
+      if ((pA.position == 'GK' && pB.position != 'GK') ||
+          (pB.position == 'GK' && pA.position != 'GK')) {
+        return false;
+      }
+
+      final newStartingXi = List<PlayerCandidate>.from(startingXi);
+      newStartingXi[aInStarting] = pB;
+
+      // Validate formation constraints: 1 GK, >= 3 DEF, >= 2 MID, >= 1 FWD
+      final defs = newStartingXi.where((p) => p.position == 'DEF').length;
+      final mids = newStartingXi.where((p) => p.position == 'MID').length;
+      final fwds = newStartingXi.where((p) => p.position == 'FWD').length;
+
+      if (defs < 3 || mids < 2 || fwds < 1) {
+        return false;
+      }
+
+      final newBench = List<PlayerCandidate>.from(bench);
+      newBench[bInBench] = pA;
+
+      var newCaptain = state.result!.captain;
+      var newViceCaptain = state.result!.viceCaptain;
+      if (newCaptain.fplId == pA.fplId) {
+        newCaptain = pB;
+      }
+      if (newViceCaptain.fplId == pA.fplId) {
+        newViceCaptain = pB;
+      }
+
+      final formation = [1, defs, mids, fwds];
+      final totalXp = newStartingXi.fold<double>(0.0, (sum, p) => sum + p.xp) + newCaptain.xp;
+
+      final updatedResult = LineupResult(
+        startingXi: newStartingXi,
+        captain: newCaptain,
+        viceCaptain: newViceCaptain,
+        bench: newBench,
+        formation: formation,
+        totalExpectedPoints: double.parse(totalXp.toStringAsFixed(1)),
+        captaincyScore: newCaptain.xp,
+        benchOrderScore: state.result!.benchOrderScore,
+        isQuickModeFallback: state.result!.isQuickModeFallback,
+      );
+
+      state = state.copyWith(
+        result: updatedResult,
+        isRecommendedMode: false,
+      );
+      return true;
+    }
+
+    // Case 2: Swap Bench and Starter player (symmetric)
+    if (aInBench != -1 && bInStarting != -1) {
+      return swapPlayers(playerBId, playerAId);
+    }
+
+    // Case 3: Reorder bench slots
+    if (aInBench != -1 && bInBench != -1) {
+      final pA = bench[aInBench];
+      final pB = bench[bInBench];
+      if (pA.position == 'GK' || pB.position == 'GK') return false;
+
+      final newBench = List<PlayerCandidate>.from(bench);
+      newBench[aInBench] = pB;
+      newBench[bInBench] = pA;
+
+      state = state.copyWith(
+        result: LineupResult(
+          startingXi: state.result!.startingXi,
+          captain: state.result!.captain,
+          viceCaptain: state.result!.viceCaptain,
+          bench: newBench,
+          formation: state.result!.formation,
+          totalExpectedPoints: state.result!.totalExpectedPoints,
+          captaincyScore: state.result!.captaincyScore,
+          benchOrderScore: state.result!.benchOrderScore,
+          isQuickModeFallback: state.result!.isQuickModeFallback,
+        ),
+      );
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Generates top transfer recommendations for a specific player based on the deterministic optimiser
+  Future<List<PlayerCandidate>> getTransferRecommendationsForPlayer(
+    PlayerCandidate player, {
+    int limit = 5,
+  }) async {
+    final squadState = _ref.read(squadNotifierProvider);
+    final fplRepo = _ref.read(fplRepositoryProvider);
+    final maxSpendTenths = player.priceTenths + squadState.bankTenths;
+    final currentSquadIds = squadState.squad.map((p) => p.fplId).toSet();
+
+    try {
+      final playersSearch = await fplRepo.searchPlayers('', limit: 600);
+      final gw = squadState.nextGameweek?.id ?? squadState.currentGameweek?.id ?? 1;
+      final xpMap = <int, double>{};
+
+      try {
+        final bundle = await fplRepo.getProjectionBundle(gw);
+        final pList = bundle['players'] as List<dynamic>? ?? [];
+        for (final p in pList) {
+          final id = p['fpl_id'] as int?;
+          final fixtures = p['fixtures'] as List<dynamic>? ?? [];
+          double total = 0.0;
+          for (final f in fixtures) {
+            total += (f['expected_points'] as num?)?.toDouble() ?? 0.0;
+          }
+          if (id != null && total > 0) {
+            xpMap[id] = double.parse(total.toStringAsFixed(1));
+          }
+        }
+      } catch (_) {}
+
+      final candidates = <PlayerCandidate>[];
+      for (final p in playersSearch) {
+        final fplId = (p['fpl_id'] as num?)?.toInt() ?? 0;
+        if (currentSquadIds.contains(fplId)) continue;
+
+        final rawPos = (p['position'] as String?) ?? 'MID';
+        final normPos = rawPos == 'GKP' ? 'GK' : rawPos;
+        if (normPos != player.position) continue;
+
+        final cost = (p['now_cost'] as num?)?.toInt() ?? 50;
+        if (cost > maxSpendTenths) continue;
+
+        final name = (p['web_name'] as String?) ?? 'Player $fplId';
+        final clubId = (p['team_fpl_id'] as num?)?.toInt() ?? 1;
+        final chance = (p['chance_of_playing_next_round'] as num?)?.toDouble();
+        final status = (p['status'] as String?) ?? 'a';
+        final pStart = (chance != null)
+            ? (chance / 100.0).clamp(0.05, 0.95)
+            : (status == 'out' ? 0.05 : 0.90);
+        final xp = xpMap[fplId] ?? ((cost / 20.0) * (status == 'a' ? 1.0 : 0.4)).clamp(1.5, 9.5);
+
+        candidates.add(PlayerCandidate(
+          fplId: fplId,
+          webName: name,
+          position: normPos,
+          clubId: clubId,
+          priceTenths: cost,
+          sellingPriceTenths: cost,
+          xp: double.parse(xp.toStringAsFixed(1)),
+          pStart: double.parse(pStart.toStringAsFixed(2)),
+          pSub: 0.05,
+        ));
+      }
+
+      candidates.sort((a, b) => b.xp.compareTo(a.xp));
+      return candidates.take(limit).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<void> selectGameweek(int gw) async {
     final squadState = _ref.read(squadNotifierProvider);
     final latestGw = squadState.nextGameweek?.id ??

@@ -53,13 +53,19 @@ class _SquadScreenState extends ConsumerState<SquadScreen> {
         : (totalSquadValueTenths > 0 ? totalSquadValueTenths : 1000);
 
     return Scaffold(
-      backgroundColor: colors.bgBase,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: colors.bgBase,
+        toolbarHeight: 68.0,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        titleSpacing: AppTokens.screenGutter,
         title: Text(
           'Squad',
-          style: AppTextStyles.title.copyWith(color: colors.textPrimary),
+          style: AppTextStyles.title.copyWith(
+            fontSize: 24.0,
+            fontWeight: FontWeight.w800,
+            color: colors.textPrimary,
+          ),
         ),
         actions: [
           IconButton(

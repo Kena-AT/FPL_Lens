@@ -437,10 +437,19 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
 
     if (!squadState.hasSquad || squadState.squad.length != 15) {
       return Scaffold(
-        backgroundColor: colors.bgBase,
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: Text('Transfer Lab', style: AppTextStyles.headline.copyWith(color: colors.textPrimary)),
-          backgroundColor: colors.bgBase,
+          toolbarHeight: 68.0,
+          titleSpacing: AppTokens.screenGutter,
+          title: Text(
+            'Transfer Lab',
+            style: AppTextStyles.title.copyWith(
+              fontSize: 24.0,
+              fontWeight: FontWeight.w800,
+              color: colors.textPrimary,
+            ),
+          ),
+          backgroundColor: Colors.transparent,
           elevation: 0,
         ),
         body: Center(
@@ -458,10 +467,19 @@ class _TransferLabScreenState extends ConsumerState<TransferLabScreen> {
     final bankStr = '£${(squadState.bankTenths / 10.0).toStringAsFixed(1)}m';
 
     return Scaffold(
-      backgroundColor: colors.bgBase,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text('Transfer Lab', style: AppTextStyles.headline.copyWith(color: colors.textPrimary)),
-        backgroundColor: colors.bgBase,
+        toolbarHeight: 68.0,
+        titleSpacing: AppTokens.screenGutter,
+        title: Text(
+          'Transfer Lab',
+          style: AppTextStyles.title.copyWith(
+            fontSize: 24.0,
+            fontWeight: FontWeight.w800,
+            color: colors.textPrimary,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
           IconButton(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../theme/tokens.dart';
 import '../theme/text_styles.dart';
 
@@ -36,6 +37,7 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final isEnabled = onPressed != null && !isLoading;
     final height = size == AppButtonSize.large ? 52.0 : 44.0;
 
@@ -48,26 +50,26 @@ class AppButton extends StatelessWidget {
 
     switch (variant) {
       case AppButtonVariant.primary:
-        fillColor = isEnabled ? AppTokens.goldPrimary : AppTokens.borderSubtle;
-        textColor = isEnabled ? AppTokens.bgBase : AppTokens.textDisabled;
+        fillColor = isEnabled ? colors.accent : colors.borderSubtle;
+        textColor = isEnabled ? colors.accentOn : colors.textDisabled;
         break;
       case AppButtonVariant.secondary:
-        fillColor = isEnabled ? AppTokens.bgSurface : AppTokens.bgBase;
-        textColor = isEnabled ? AppTokens.textPrimary : AppTokens.textDisabled;
+        fillColor = isEnabled ? colors.bgSurface : colors.bgBase;
+        textColor = isEnabled ? colors.textPrimary : colors.textDisabled;
         borderSide = BorderSide(
-          color: isEnabled ? AppTokens.borderSubtle : AppTokens.borderSubtle.withValues(alpha: 0.5),
+          color: isEnabled ? colors.borderSubtle : colors.borderSubtle.withValues(alpha: 0.5),
           width: 1.0,
         );
         break;
       case AppButtonVariant.tertiary:
         fillColor = Colors.transparent;
-        textColor = isEnabled ? AppTokens.neonPrimary : AppTokens.textDisabled;
+        textColor = isEnabled ? colors.accent : colors.textDisabled;
         break;
       case AppButtonVariant.destructive:
-        fillColor = isEnabled ? AppTokens.statusOut.withValues(alpha: 0.16) : AppTokens.bgBase;
-        textColor = isEnabled ? AppTokens.statusOut : AppTokens.textDisabled;
+        fillColor = isEnabled ? colors.statusError.withValues(alpha: 0.16) : colors.bgBase;
+        textColor = isEnabled ? colors.statusError : colors.textDisabled;
         borderSide = BorderSide(
-          color: isEnabled ? AppTokens.statusOut : AppTokens.borderSubtle,
+          color: isEnabled ? colors.statusError : colors.borderSubtle,
           width: 1.0,
         );
         break;
@@ -115,31 +117,31 @@ class AppButton extends StatelessWidget {
         onTap: isEnabled ? onPressed : null,
         borderRadius: BorderRadius.circular(AppTokens.radiusPill),
         splashColor: variant == AppButtonVariant.primary
-            ? AppTokens.goldDark.withValues(alpha: 0.3)
-            : AppTokens.borderSubtle,
+            ? colors.accentSoft.withValues(alpha: 0.3)
+            : colors.borderSubtle,
         highlightColor: variant == AppButtonVariant.primary
-            ? AppTokens.goldDark
-            : AppTokens.borderSubtle.withValues(alpha: 0.5),
+            ? colors.accentSoft
+            : colors.borderSubtle.withValues(alpha: 0.5),
         child: Container(
           height: height,
           width: width,
+          padding: const EdgeInsets.symmetric(horizontal: AppTokens.space24),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppTokens.radiusPill),
             border: borderSide != BorderSide.none ? Border.fromBorderSide(borderSide) : null,
           ),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: AppTokens.space24),
           child: content,
         ),
       ),
     );
 
-    return Semantics(
-      button: true,
-      enabled: isEnabled,
-      label: isLoading ? '$label, Loading' : label,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: verticalTouchPadding),
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: verticalTouchPadding),
+      child: Semantics(
+        button: true,
+        enabled: isEnabled,
+        label: label,
         child: button,
       ),
     );

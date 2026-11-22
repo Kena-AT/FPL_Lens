@@ -12,6 +12,7 @@ import '../../../core/widgets/freshness_label.dart';
 import '../../../core/widgets/pitch_view.dart';
 import '../../squad/providers/squad_provider.dart';
 import '../providers/lineup_provider.dart';
+import '../widgets/transfer_recommendation_sheet.dart';
 
 /// Screen P10: LineupScreen (Spec §5, Frontend Implementation Plan §3, Visual Redesign §8.9).
 /// Displays optimized starting XI on tactical pitch, captaincy controls, and ordered bench.
@@ -25,6 +26,7 @@ class LineupScreen extends ConsumerStatefulWidget {
 
 class _LineupScreenState extends ConsumerState<LineupScreen> {
   PlayerCandidate? _selectedPlayer;
+  PlayerCandidate? _substitutingPlayer;
 
   @override
   void initState() {
@@ -36,6 +38,87 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
         ref.read(lineupNotifierProvider.notifier).optimize();
       }
     });
+  }
+
+  void _openTransferRecommendations(PlayerCandidate player) {
+    final colors = AppColors.of(context);
+    final squadState = ref.read(squadNotifierProvider);
+    final nextGw = squadState.nextGameweek;
+    final curGw = squadState.currentGameweek;
+    final latestGw = (curGw?.finished == true && nextGw != null)
+        ? nextGw.id
+        : (nextGw?.id ?? curGw?.id ?? 1);
+    final selectedGw = ref.read(lineupNotifierProvider).selectedGameweek ?? latestGw;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => TransferRecommendationSheet(
+        player: player,
+        onSubstituteRequested: () {
+          setState(() {
+            _substitutingPlayer = player;
+          });
+        },
+        onCaptaincyRequested: () => _showPlayerActionSheet(player, selectedGw, colors),
+      ),
+    );
+  }
+
+  void _handlePlayerTap(PlayerCandidate player) {
+    if (_substitutingPlayer != null) {
+      if (_substitutingPlayer!.fplId == player.fplId) {
+        setState(() => _substitutingPlayer = null);
+        return;
+      }
+      _executeSubstitution(_substitutingPlayer!, player);
+    } else {
+      setState(() {
+        _selectedPlayer = player;
+      });
+      final squadState = ref.read(squadNotifierProvider);
+      final nextGw = squadState.nextGameweek;
+      final curGw = squadState.currentGameweek;
+      final latestGw = (curGw?.finished == true && nextGw != null)
+          ? nextGw.id
+          : (nextGw?.id ?? curGw?.id ?? 1);
+      final selectedGw = ref.read(lineupNotifierProvider).selectedGameweek ?? latestGw;
+      final colors = AppColors.of(context);
+      _showPlayerActionSheet(player, selectedGw, colors);
+    }
+  }
+
+  void _handlePlayerLongPress(PlayerCandidate player) {
+    setState(() {
+      _substitutingPlayer = player;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Tap another player or drag to substitution bench to swap with ${player.webName}.'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _executeSubstitution(PlayerCandidate incoming, PlayerCandidate target) {
+    final success = ref.read(lineupNotifierProvider.notifier).swapPlayers(incoming.fplId, target.fplId);
+    setState(() => _substitutingPlayer = null);
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid substitution. Formations must have at least 1 GK, 3 DEF, 2 MID, 1 FWD.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Substituted ${incoming.webName} with ${target.webName}.'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _showPlayerActionSheet(PlayerCandidate player, int gameweek, AppColors colors) {
@@ -131,6 +214,76 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                   ),
                   const SizedBox(height: 12.0),
 
+                  // Recommended Transfer Replacements Selection Area (§8.10 Transfer engine)
+                  Container(
+                    padding: const EdgeInsets.all(AppTokens.space12),
+                    decoration: BoxDecoration(
+                      color: colors.bgElevated,
+                      borderRadius: BorderRadius.circular(AppTokens.radiusCard),
+                      border: Border.all(color: colors.borderSubtle),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.swap_horiz_rounded, size: 16.0, color: colors.accent),
+                                const SizedBox(width: 6.0),
+                                Text(
+                                  'TRANSFER RECOMMENDATIONS',
+                                  style: AppTextStyles.label.copyWith(
+                                    color: colors.accent,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            InkWell(
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                _openTransferRecommendations(player);
+                              },
+                              child: Text(
+                                'View All',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: colors.accent,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6.0),
+                        Text(
+                          'Best suited replacements for ${player.webName} (${player.position}) within budget (£${((player.priceTenths + ref.read(squadNotifierProvider).bankTenths) / 10.0).toStringAsFixed(1)}m):',
+                          style: AppTextStyles.caption.copyWith(color: colors.textSecondary, fontSize: 11.5),
+                        ),
+                        const SizedBox(height: 8.0),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _openTransferRecommendations(player);
+                            },
+                            icon: const Icon(Icons.auto_awesome_rounded, size: 16.0),
+                            label: const Text('Analyze Replacements & Net xP Gain'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: colors.accent,
+                              side: BorderSide(color: colors.accent.withValues(alpha: 0.5)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTokens.radiusChip)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12.0),
+
                   // Action Buttons
                   Material(
                     color: Colors.transparent,
@@ -217,11 +370,17 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
     final colors = AppColors.of(context);
     final lineupState = ref.watch(lineupNotifierProvider);
     final squadState = ref.watch(squadNotifierProvider);
-    final latestGw = squadState.nextGameweek?.id ??
-        squadState.currentGameweek?.id ??
-        (squadState.gameweekHistory.isNotEmpty
-            ? squadState.gameweekHistory.map((g) => g.gameweek).reduce((a, b) => a > b ? a : b)
-            : 1);
+    final nextGw = squadState.nextGameweek;
+    final curGw = squadState.currentGameweek;
+    // When the previous week games have ended, the active lineup target is nextGameweek
+    final bool currentGwEnded = curGw?.finished == true;
+    final latestGw = (currentGwEnded && nextGw != null)
+        ? nextGw.id
+        : (nextGw?.id ??
+            curGw?.id ??
+            (squadState.gameweekHistory.isNotEmpty
+                ? squadState.gameweekHistory.map((g) => g.gameweek).reduce((a, b) => a > b ? a : b)
+                : 1));
     final selectedGw = lineupState.selectedGameweek ?? latestGw;
     final maxGw = selectedGw > latestGw ? selectedGw : latestGw;
 
@@ -271,8 +430,12 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
     final result = lineupState.result;
 
     return Scaffold(
-      backgroundColor: colors.bgBase,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        toolbarHeight: 68.0,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: AppTokens.screenGutter,
         title: DropdownButtonHideUnderline(
           child: DropdownButton<int>(
             isExpanded: true,
@@ -287,7 +450,9 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      w == latestGw ? 'Gameweek $w (Latest)' : 'Gameweek $w',
+                      w == latestGw
+                          ? 'Gameweek $w (Active)'
+                          : (w < latestGw ? 'Gameweek $w (Finished)' : 'Gameweek $w'),
                       style: AppTextStyles.headline.copyWith(
                         fontSize: 16.0,
                         color: w == selectedGw ? colors.accent : colors.textPrimary,
@@ -303,8 +468,6 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
             },
           ),
         ),
-        backgroundColor: colors.bgBase,
-        elevation: 0,
         actions: [
           IconButton(
             icon: Icon(Icons.grid_on_rounded, color: colors.textPrimary),
@@ -444,6 +607,45 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                           ),
                         ],
 
+                        if (_substitutingPlayer != null) ...[
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(
+                              AppTokens.screenGutter,
+                              AppTokens.space8,
+                              AppTokens.screenGutter,
+                              0,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+                            decoration: BoxDecoration(
+                              color: colors.statusWarn.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(AppTokens.radiusCard),
+                              border: Border.all(color: colors.statusWarn, width: 1.5),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.swap_vert_rounded, color: colors.statusWarn, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Select a player to substitute with ${_substitutingPlayer!.webName} (${_substitutingPlayer!.position})',
+                                    style: AppTextStyles.label.copyWith(
+                                      color: colors.statusWarn,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12.0,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.close_rounded, color: colors.statusWarn, size: 20),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  onPressed: () => setState(() => _substitutingPlayer = null),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
                         // Header Metrics Card (Layered Bento Card §8.9)
                         Container(
                           margin: const EdgeInsets.all(AppTokens.screenGutter),
@@ -546,13 +748,10 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                           captain: result.captain,
                           viceCaptain: result.viceCaptain,
                           selectedPlayerId: _selectedPlayer?.fplId,
-                          onPlayerTap: (p) {
-                            setState(() {
-                              _selectedPlayer = p;
-                            });
-                            _showPlayerActionSheet(p, selectedGw, colors);
-                          },
-                          onPlayerLongPress: (p) => _showPlayerActionSheet(p, selectedGw, colors),
+                          substitutingPlayerId: _substitutingPlayer?.fplId,
+                          onPlayerTap: _handlePlayerTap,
+                          onPlayerLongPress: _handlePlayerLongPress,
+                          onPlayerSwap: (incoming, target) => _executeSubstitution(incoming, target),
                         ),
 
                         // Performance Index Legend Row (§8.9)
@@ -577,13 +776,10 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
                         BenchStrip(
                           benchPlayers: result.bench,
                           selectedPlayerId: _selectedPlayer?.fplId,
-                          onPlayerTap: (p) {
-                            setState(() {
-                              _selectedPlayer = p;
-                            });
-                            _showPlayerActionSheet(p, selectedGw, colors);
-                          },
-                          onPlayerLongPress: (p) => _showPlayerActionSheet(p, selectedGw, colors),
+                          substitutingPlayerId: _substitutingPlayer?.fplId,
+                          onPlayerTap: _handlePlayerTap,
+                          onPlayerLongPress: _handlePlayerLongPress,
+                          onPlayerSwap: (incoming, target) => _executeSubstitution(incoming, target),
                         ),
 
                         const SizedBox(height: 16.0),

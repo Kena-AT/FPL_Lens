@@ -141,7 +141,7 @@ class _GameweekScreenState extends ConsumerState<GameweekScreen> {
             children: [
               Text(
                 'Gameweek Summary',
-                style: AppTextStyles.label.copyWith(color: AppTokens.goldPrimary),
+                style: AppTextStyles.label.copyWith(color: AppTokens.accent),
               ),
               if (meta?.isCurrent == true)
                 Container(
@@ -217,7 +217,7 @@ class _GameweekScreenState extends ConsumerState<GameweekScreen> {
                       'Top 5%',
                       style: AppTextStyles.headline.copyWith(
                         fontSize: 18.0,
-                        color: AppTokens.goldPrimary,
+                        color: AppTokens.accent,
                       ),
                     ),
                   ],
@@ -285,7 +285,7 @@ class _GameweekScreenState extends ConsumerState<GameweekScreen> {
                       decoration: BoxDecoration(
                         color: fixture.finished
                             ? AppTokens.bgElevated
-                            : AppTokens.goldPrimary.withValues(alpha: 0.15),
+                            : AppTokens.accent.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                       ),
                       child: Text(
@@ -294,7 +294,7 @@ class _GameweekScreenState extends ConsumerState<GameweekScreen> {
                           fontWeight: FontWeight.bold,
                           color: fixture.finished
                               ? AppTokens.textPrimary
-                              : AppTokens.goldPrimary,
+                              : AppTokens.accent,
                         ),
                       ),
                     )
@@ -400,13 +400,13 @@ class _GameweekScreenState extends ConsumerState<GameweekScreen> {
                                 vertical: 2.0,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTokens.goldPrimary.withValues(alpha: 0.2),
+                                color: AppTokens.accent.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(AppTokens.radiusPill),
                               ),
                               child: Text(
                                 'Current',
                                 style: AppTextStyles.caption.copyWith(
-                                  color: AppTokens.goldPrimary,
+                                  color: AppTokens.accent,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 11.0,
                                 ),
@@ -439,7 +439,7 @@ class _GameweekScreenState extends ConsumerState<GameweekScreen> {
                     const Icon(
                       Icons.timer_outlined,
                       size: 16.0,
-                      color: AppTokens.goldPrimary,
+                      color: AppTokens.accent,
                     ),
                     const SizedBox(width: AppTokens.space8),
                     Flexible(

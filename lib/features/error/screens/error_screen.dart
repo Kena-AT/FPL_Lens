@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/analytics/events.dart';
 import '../../../core/network/error_mapper.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
@@ -25,7 +26,7 @@ class ErrorScreenArgs {
   });
 }
 
-/// Screen P20: Error and offline (`/error`) per Frontend Implementation Plan Part E.
+/// Screen P20: Error and offline (`/error`) per Visual Redesign Design Doc §8.20 and §9.4.
 /// Dedicated full-screen recovery shell for unrecoverable errors and complete network loss.
 class ErrorScreen extends ConsumerStatefulWidget {
   final AppError error;
@@ -180,18 +181,19 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final squadState = ref.watch(squadNotifierProvider);
     final hasStoredData = squadState.hasSquad;
     final canGoBack = _canPop(context);
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: canGoBack
             ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppTokens.textPrimary),
+                icon: Icon(Icons.arrow_back, color: colors.textPrimary),
                 onPressed: () => Navigator.of(context).maybePop(),
               )
             : null,
@@ -206,16 +208,20 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
               Icon(
                 _getIcon(),
                 size: 64.0,
-                color: AppTokens.statusOut,
+                color: colors.statusError,
               ),
               const SizedBox(height: AppTokens.space24),
 
-              // Title (Heading)
+              // Title (Heading) as Hero
               Semantics(
                 header: true,
                 child: Text(
                   _getTitle(),
-                  style: AppTextStyles.headline.copyWith(fontSize: 22.0),
+                  style: AppTextStyles.headline.copyWith(
+                    fontSize: 22.0,
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -224,7 +230,7 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
               // Body
               Text(
                 _getBody(),
-                style: AppTextStyles.body.copyWith(color: AppTokens.textSecondary),
+                style: AppTextStyles.body.copyWith(color: colors.textSecondary),
                 textAlign: TextAlign.center,
               ),
 
@@ -233,7 +239,7 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
                 const SizedBox(height: AppTokens.space16),
                 Text(
                   'Last updated ${_formatTime(widget.lastUpdated!)}',
-                  style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+                  style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
                 ),
               ],
 

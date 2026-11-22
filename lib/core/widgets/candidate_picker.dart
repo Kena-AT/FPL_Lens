@@ -91,7 +91,7 @@ class _CandidatePickerState extends State<CandidatePicker> {
               Text(
                 'Max: £${(widget.maxBudgetTenths / 10.0).toStringAsFixed(1)}m',
                 style: AppTextStyles.numeric.copyWith(
-                  color: AppTokens.goldPrimary,
+                  color: AppTokens.accent,
                   fontWeight: FontWeight.w700,
                   fontSize: 14.0,
                 ),

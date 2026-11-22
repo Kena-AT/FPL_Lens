@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/storage/app_database.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/app_button.dart';
@@ -307,30 +308,32 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final aiState = ref.watch(aiKeyProvider);
     final providerName =
         AiProviderRegistry.getAdapter(aiState.providerId ?? '')?.displayName ??
             'AI Provider';
 
     return Scaffold(
-      backgroundColor: AppTokens.bgBase,
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
-        backgroundColor: AppTokens.bgBase,
+        backgroundColor: colors.bgSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppTokens.textPrimary),
+          icon: Icon(Icons.close, color: colors.textPrimary),
           onPressed: _handleClose,
         ),
         title: Text(
           'Scan squad',
-          style: AppTextStyles.headline.copyWith(fontSize: 18.0),
+          style: AppTextStyles.headline.copyWith(fontSize: 18.0, color: colors.textPrimary),
         ),
         actions: [
           IconButton(
             icon: Icon(
               Icons.help_outline,
-              color: _showTips ? AppTokens.goldPrimary : AppTokens.textSecondary,
+              color: _showTips ? colors.accent : colors.textSecondary,
             ),
             tooltip: 'Tips',
             onPressed: () {
@@ -354,9 +357,9 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppTokens.space16),
                   decoration: BoxDecoration(
-                    color: AppTokens.bgSurface,
+                    color: colors.bgSurface,
                     borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                    border: Border.all(color: AppTokens.borderSubtle),
+                    border: Border.all(color: colors.borderSubtle),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,26 +370,28 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
                           Text(
                             'SCREENSHOT TIPS',
                             style: AppTextStyles.label.copyWith(
-                              color: AppTokens.goldPrimary,
+                              color: colors.accent,
                               letterSpacing: 1.1,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           InkWell(
                             onTap: () => setState(() => _showTips = false),
-                            child: const Icon(
+                            child: Icon(
                               Icons.close,
                               size: 16,
-                              color: AppTokens.textSecondary,
+                              color: colors.textSecondary,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: AppTokens.space8),
-                      _buildTipRow('Capture the full squad, all 15 players.'),
-                      _buildTipRow('Keep the screen bright and avoid glare.'),
-                      _buildTipRow('Use a full-screen capture, not a cropped image.'),
+                      _buildTipRow('Capture the full squad, all 15 players.', colors),
+                      _buildTipRow('Keep the screen bright and avoid glare.', colors),
+                      _buildTipRow('Use a full-screen capture, not a cropped image.', colors),
                       _buildTipRow(
                         'Nothing is sent to FPL Lens. The image goes only to your chosen provider.',
+                        colors,
                       ),
                     ],
                   ),
@@ -396,7 +401,7 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
 
               // Main State Views
               Expanded(
-                child: _buildCurrentStateView(providerName),
+                child: _buildCurrentStateView(providerName, colors),
               ),
             ],
           ),
@@ -405,25 +410,25 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
     );
   }
 
-  Widget _buildTipRow(String text) {
+  Widget _buildTipRow(String text, AppColors colors) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 4.0, right: 8.0),
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0, right: 8.0),
             child: Icon(
               Icons.check_circle_outline,
               size: 14,
-              color: AppTokens.statusAvailable,
+              color: colors.statusOk,
             ),
           ),
           Expanded(
             child: Text(
               text,
               style: AppTextStyles.caption.copyWith(
-                color: AppTokens.textSecondary,
+                color: colors.textSecondary,
                 height: 1.3,
               ),
             ),
@@ -433,27 +438,27 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
     );
   }
 
-  Widget _buildCurrentStateView(String providerName) {
+  Widget _buildCurrentStateView(String providerName, AppColors colors) {
     switch (_currentStep) {
       case ScanStep.capture:
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.camera_alt_outlined,
               size: 64,
-              color: AppTokens.neonPrimary,
+              color: colors.accent,
             ),
             const SizedBox(height: AppTokens.space16),
             Text(
               'Capture your FPL squad',
-              style: AppTextStyles.headline.copyWith(color: AppTokens.textPrimary),
+              style: AppTextStyles.headline.copyWith(color: colors.textPrimary),
             ),
             const SizedBox(height: AppTokens.space8),
             Text(
               'Take a photo of another screen or choose a screenshot from your gallery.',
               style: AppTextStyles.body.copyWith(
-                color: AppTokens.textSecondary,
+                color: colors.textSecondary,
                 fontSize: 14,
               ),
               textAlign: TextAlign.center,
@@ -481,9 +486,9 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: AppTokens.bgSurface,
+                  color: colors.bgSurface,
                   borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                  border: Border.all(color: AppTokens.borderSubtle),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: _imageBytes != null
@@ -524,14 +529,14 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
       case ScanStep.checkingImage:
       case ScanStep.readingSquad:
       case ScanStep.matchingPlayers:
-        return _buildProgressView(providerName);
+        return _buildProgressView(providerName, colors);
 
       case ScanStep.error:
-        return _buildErrorView();
+        return _buildErrorView(colors);
     }
   }
 
-  Widget _buildProgressView(String providerName) {
+  Widget _buildProgressView(String providerName, AppColors colors) {
     int currentStepIndex = 1;
     String stepLabel = 'Checking image';
     double progress = 0.33;
@@ -549,29 +554,29 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const SizedBox(
+        SizedBox(
           width: 48,
           height: 48,
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppTokens.neonPrimary),
+            valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
             strokeWidth: 3.0,
           ),
         ),
         const SizedBox(height: AppTokens.space24),
         Text(
           stepLabel,
-          style: AppTextStyles.headline.copyWith(fontSize: 18),
+          style: AppTextStyles.headline.copyWith(fontSize: 18, color: colors.textPrimary),
         ),
         const SizedBox(height: AppTokens.space4),
         Text(
           'Step $currentStepIndex of 3 • Read by $providerName',
-          style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+          style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
         ),
         const SizedBox(height: AppTokens.space24),
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: AppTokens.bgSurface,
-          valueColor: const AlwaysStoppedAnimation<Color>(AppTokens.neonPrimary),
+          backgroundColor: colors.bgSurface,
+          valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
           minHeight: 4.0,
         ),
         const SizedBox(height: AppTokens.space32),
@@ -589,25 +594,25 @@ class _ScanSquadScreenState extends ConsumerState<ScanSquadScreen> {
     );
   }
 
-  Widget _buildErrorView() {
+  Widget _buildErrorView(AppColors colors) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(
+        Icon(
           Icons.error_outline,
           size: 56,
-          color: AppTokens.statusOut,
+          color: colors.statusError,
         ),
         const SizedBox(height: AppTokens.space16),
         Text(
           'Screenshot reading failed',
-          style: AppTextStyles.headline.copyWith(fontSize: 18),
+          style: AppTextStyles.headline.copyWith(fontSize: 18, color: colors.textPrimary),
         ),
         const SizedBox(height: AppTokens.space8),
         Text(
           _errorMessage ?? 'Something went wrong while processing the image.',
           style: AppTextStyles.body.copyWith(
-            color: AppTokens.textSecondary,
+            color: colors.textSecondary,
             fontSize: 14,
           ),
           textAlign: TextAlign.center,

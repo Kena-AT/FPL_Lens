@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/formatting/app_formatters.dart';
 import '../../../core/network/error_mapper.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/availability_badge.dart';
@@ -30,10 +31,12 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
   AppError? _error;
   bool _isNotFound = false;
   Map<String, dynamic>? _data;
+  late int _selectedGw;
 
   @override
   void initState() {
     super.initState();
+    _selectedGw = widget.gameweek ?? 1;
     _loadData();
   }
 
@@ -46,12 +49,13 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
 
     try {
       final repo = ref.read(fplRepositoryProvider);
-      int targetGw = widget.gameweek ?? 1;
+      int targetGw = _selectedGw;
 
-      if (widget.gameweek == null) {
+      if (widget.gameweek == null && targetGw == 1) {
         try {
           final gwMeta = await repo.getCurrentGameweek();
           targetGw = gwMeta.next?.id ?? gwMeta.current?.id ?? 1;
+          _selectedGw = targetGw;
         } catch (_) {
           targetGw = 1;
         }
@@ -99,31 +103,45 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
     }
   }
 
+  void _onGameweekChanged(int newGw) {
+    if (newGw == _selectedGw) return;
+    setState(() => _selectedGw = newGw);
+    _loadData();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
     if (_isLoading) {
       return Scaffold(
+        backgroundColor: colors.bgBase,
         appBar: AppBar(
+          backgroundColor: colors.bgSurface,
+          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: Icon(Icons.arrow_back, color: colors.textPrimary),
             onPressed: () => context.pop(),
           ),
-          title: const Text('Loading...'),
+          title: Text('Loading...', style: AppTextStyles.headline.copyWith(color: colors.textPrimary)),
         ),
-        body: const Center(
-          child: CircularProgressIndicator(),
+        body: Center(
+          child: CircularProgressIndicator(color: colors.accent),
         ),
       );
     }
 
     if (_isNotFound) {
       return Scaffold(
+        backgroundColor: colors.bgBase,
         appBar: AppBar(
+          backgroundColor: colors.bgSurface,
+          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: Icon(Icons.arrow_back, color: colors.textPrimary),
             onPressed: () => context.pop(),
           ),
-          title: const Text('Player Detail'),
+          title: Text('Player Detail', style: AppTextStyles.headline.copyWith(color: colors.textPrimary)),
         ),
         body: EmptyState(
           icon: Icons.person_off_rounded,
@@ -137,12 +155,15 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
 
     if (_error != null) {
       return Scaffold(
+        backgroundColor: colors.bgBase,
         appBar: AppBar(
+          backgroundColor: colors.bgSurface,
+          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: Icon(Icons.arrow_back, color: colors.textPrimary),
             onPressed: () => context.pop(),
           ),
-          title: const Text('Player Detail'),
+          title: Text('Player Detail', style: AppTextStyles.headline.copyWith(color: colors.textPrimary)),
         ),
         body: Center(
           child: ErrorState(
@@ -164,6 +185,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
     final news = player?['news'] as String?;
     final inputsAsOfStr = _data?['inputs_as_of'] as String?;
     final inputsAsOf = inputsAsOfStr != null ? DateTime.tryParse(inputsAsOfStr) : null;
+    final modelVersion = (_data?['model_version'] as String?) ?? 'xp-v1.5.0';
 
     final hasFixtures = fixtures.isNotEmpty;
     final primaryFixture = hasFixtures ? fixtures.first as Map<String, dynamic> : null;
@@ -173,28 +195,60 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
     final kickoff = primaryFixture?['kickoff_time'] as String?;
 
     return Scaffold(
+      backgroundColor: colors.bgBase,
       appBar: AppBar(
+        backgroundColor: colors.bgSurface,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, color: colors.textPrimary),
           onPressed: () => context.pop(),
         ),
         title: Text(
           webName,
-          style: AppTextStyles.headline,
+          style: AppTextStyles.headline.copyWith(color: colors.textPrimary),
         ),
+        actions: [
+          // Gameweek selector
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: _selectedGw,
+                dropdownColor: colors.bgElevated,
+                icon: Icon(Icons.keyboard_arrow_down, color: colors.textSecondary),
+                items: List.generate(38, (i) => i + 1).map((gw) {
+                  return DropdownMenuItem<int>(
+                    value: gw,
+                    child: Text(
+                      'GW $gw',
+                      style: AppTextStyles.label.copyWith(
+                        color: gw == _selectedGw ? colors.accent : colors.textPrimary,
+                        fontWeight: gw == _selectedGw ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) _onGameweekChanged(val);
+                },
+              ),
+            ),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
+        color: colors.accent,
         child: ListView(
           padding: const EdgeInsets.all(AppTokens.screenGutter),
           children: [
-            // 2. Header card
+            // 1. Header card: Name, Club, Position, Price, Availability
             Container(
               padding: const EdgeInsets.all(AppTokens.space16),
               decoration: BoxDecoration(
-                color: AppTokens.bgSurface,
+                color: colors.bgSurface,
                 borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                border: Border.all(color: AppTokens.borderSubtle),
+                border: Border.all(color: colors.borderSubtle),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,13 +261,13 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                           vertical: AppTokens.space2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTokens.bgElevated,
+                          color: colors.accentSoft.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(AppTokens.radiusChip),
                         ),
                         child: Text(
                           position,
                           style: AppTextStyles.label.copyWith(
-                            color: AppTokens.goldPrimary,
+                            color: colors.accent,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -222,7 +276,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                       Text(
                         teamShort,
                         style: AppTextStyles.label.copyWith(
-                          color: AppTokens.textSecondary,
+                          color: colors.textSecondary,
                         ),
                       ),
                       const Spacer(),
@@ -231,6 +285,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                         style: AppTextStyles.numeric.copyWith(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
                         ),
                       ),
                     ],
@@ -257,23 +312,44 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
             ),
             const SizedBox(height: AppTokens.space16),
 
-            // 3. Projection Summary
+            // 2. Hero Card (layered): projected points in Hero numeral (32 sp), model label xp-v1.5.0
             if (hasFixtures && primaryFixture != null) ...[
               Container(
                 padding: const EdgeInsets.all(AppTokens.space16),
                 decoration: BoxDecoration(
-                  color: AppTokens.bgSurface,
+                  color: colors.bgSurface,
                   borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                  border: Border.all(color: AppTokens.borderSubtle),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Next Gameweek Projection',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppTokens.textSecondary,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Next Gameweek Projection',
+                          style: AppTextStyles.caption.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: colors.bgElevated,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: colors.borderSubtle, width: 0.5),
+                          ),
+                          child: Text(
+                            modelVersion,
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.accent,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: AppTokens.space8),
                     Row(
@@ -285,14 +361,14 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                           style: AppTextStyles.numeric.copyWith(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: AppTokens.goldPrimary,
+                            color: colors.accent,
                           ),
                         ),
                         const SizedBox(width: AppTokens.space8),
                         Text(
                           'xP',
                           style: AppTextStyles.label.copyWith(
-                            color: AppTokens.textSecondary,
+                            color: colors.textSecondary,
                           ),
                         ),
                       ],
@@ -301,7 +377,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                     Text(
                       _formatFixtureLine(oppShort, isHome, kickoff),
                       style: AppTextStyles.body.copyWith(
-                        color: AppTokens.textPrimary,
+                        color: colors.textPrimary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -310,29 +386,35 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
               ),
               const SizedBox(height: AppTokens.space16),
 
-              // 4. Attribution List
+              // 3. Attribution List (positive terms in textPrimary/accent, negative in statusError with ▼)
               Text(
                 'Projection Breakdown',
-                style: AppTextStyles.headline.copyWith(fontSize: 18),
+                style: AppTextStyles.headline.copyWith(
+                  fontSize: 18,
+                  color: colors.textPrimary,
+                ),
               ),
               const SizedBox(height: AppTokens.space8),
-              _buildAttributionList(primaryFixture),
+              _buildAttributionList(primaryFixture, colors),
               const SizedBox(height: AppTokens.space16),
 
-              // 6. Fixture Difficulty
+              // 4. Opponent Intensity / Fixture Difficulty
               if (primaryFixture['opponent_attack_strength'] != null ||
                   primaryFixture['opponent_defence_strength'] != null) ...[
                 Text(
                   'Opponent Intensity',
-                  style: AppTextStyles.headline.copyWith(fontSize: 18),
+                  style: AppTextStyles.headline.copyWith(
+                    fontSize: 18,
+                    color: colors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: AppTokens.space8),
                 Container(
                   padding: const EdgeInsets.all(AppTokens.space16),
                   decoration: BoxDecoration(
-                    color: AppTokens.bgSurface,
+                    color: colors.bgSurface,
                     borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                    border: Border.all(color: AppTokens.borderSubtle),
+                    border: Border.all(color: colors.borderSubtle),
                   ),
                   child: Row(
                     children: [
@@ -342,7 +424,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                           children: [
                             Text(
                               'Opponent Attack',
-                              style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+                              style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
                             ),
                             const SizedBox(height: AppTokens.space4),
                             Text(
@@ -350,6 +432,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                               style: AppTextStyles.numeric.copyWith(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
+                                color: colors.textPrimary,
                               ),
                             ),
                           ],
@@ -361,7 +444,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                           children: [
                             Text(
                               'Opponent Defence',
-                              style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+                              style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
                             ),
                             const SizedBox(height: AppTokens.space4),
                             Text(
@@ -369,6 +452,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                               style: AppTextStyles.numeric.copyWith(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
+                                color: colors.textPrimary,
                               ),
                             ),
                           ],
@@ -379,20 +463,90 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                 ),
                 const SizedBox(height: AppTokens.space16),
               ],
+
+              // 5. Upcoming fixtures cards (§8.12: horizontal list with opponent, venue, and FDR as text)
+              if (fixtures.length > 1) ...[
+                Text(
+                  'Upcoming Fixtures',
+                  style: AppTextStyles.headline.copyWith(
+                    fontSize: 18,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: AppTokens.space8),
+                SizedBox(
+                  height: 90,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: fixtures.length - 1,
+                    separatorBuilder: (_, __) => const SizedBox(width: AppTokens.space8),
+                    itemBuilder: (context, index) {
+                      final f = fixtures[index + 1] as Map<String, dynamic>;
+                      final opp = f['opponent_short_name'] as String? ?? 'OPP';
+                      final isH = f['is_home'] as bool?;
+                      final venue = isH == true ? 'H' : (isH == false ? 'A' : '');
+                      final diff = f['difficulty'] ?? 3;
+                      final fXp = (f['expected_points'] as num?)?.toDouble();
+
+                      return Container(
+                        width: 110,
+                        padding: const EdgeInsets.all(AppTokens.space8),
+                        decoration: BoxDecoration(
+                          color: colors.bgSurface,
+                          borderRadius: BorderRadius.circular(AppTokens.radiusCard),
+                          border: Border.all(color: colors.borderSubtle),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '$opp ($venue)',
+                              style: AppTextStyles.label.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'FDR $diff',
+                              style: AppTextStyles.caption.copyWith(
+                                color: colors.textSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (fXp != null)
+                              Text(
+                                '${fXp.toStringAsFixed(1)} xP',
+                                style: AppTextStyles.numeric.copyWith(
+                                  color: colors.accent,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppTokens.space16),
+              ],
             ] else ...[
-              // State: No projection for this player
+              // State: No projection for this player (§9.3: player.noProjection)
               Container(
                 padding: const EdgeInsets.all(AppTokens.space24),
                 decoration: BoxDecoration(
-                  color: AppTokens.bgSurface,
+                  color: colors.bgSurface,
                   borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                  border: Border.all(color: AppTokens.borderSubtle),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 child: Center(
                   child: Text(
                     'No projection for $webName in this gameweek.',
                     style: AppTextStyles.body.copyWith(
-                      color: AppTokens.textSecondary,
+                      color: colors.textSecondary,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -401,19 +555,22 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
               const SizedBox(height: AppTokens.space16),
             ],
 
-            // 5. Injury News (if any)
+            // 6. Injury News (if any)
             if (news != null && news.trim().isNotEmpty) ...[
               Text(
                 'Injury News',
-                style: AppTextStyles.headline.copyWith(fontSize: 18),
+                style: AppTextStyles.headline.copyWith(
+                  fontSize: 18,
+                  color: colors.textPrimary,
+                ),
               ),
               const SizedBox(height: AppTokens.space8),
               Container(
                 padding: const EdgeInsets.all(AppTokens.space16),
                 decoration: BoxDecoration(
-                  color: AppTokens.bgElevated,
+                  color: colors.bgElevated,
                   borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                  border: Border.all(color: AppTokens.borderSubtle),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,14 +578,14 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                     Text(
                       news,
                       style: AppTextStyles.body.copyWith(
-                        color: AppTokens.textPrimary,
+                        color: colors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: AppTokens.space8),
                     Text(
                       'Source: FPL',
                       style: AppTextStyles.caption.copyWith(
-                        color: AppTokens.textDisabled,
+                        color: colors.textDisabled,
                       ),
                     ),
                   ],
@@ -459,7 +616,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
     return (month >= 1 && month <= 12) ? m[month - 1] : '';
   }
 
-  Widget _buildAttributionList(Map<String, dynamic> f) {
+  Widget _buildAttributionList(Map<String, dynamic> f, AppColors colors) {
     final items = <_AttributionItem>[];
 
     // 1. Availability
@@ -471,6 +628,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: '$pct%',
         explanation: 'Share of expected availability.',
         accessibleText: 'Availability, $pct percent',
+        isNegative: false,
       ));
     }
 
@@ -483,6 +641,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: '$pct%',
         explanation: 'Probability of starting in XI.',
         accessibleText: 'Start probability, $pct percent',
+        isNegative: false,
       ));
     }
 
@@ -494,6 +653,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: val.toStringAsFixed(0),
         explanation: 'Projected playing time.',
         accessibleText: 'Expected minutes, ${val.toStringAsFixed(0)}',
+        isNegative: false,
       ));
     }
 
@@ -505,6 +665,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: val.toStringAsFixed(2),
         explanation: 'Expected goal scoring returns.',
         accessibleText: 'Expected goals, ${val.toStringAsFixed(2)}',
+        isNegative: false,
       ));
     }
 
@@ -516,6 +677,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: val.toStringAsFixed(2),
         explanation: 'Expected goal creation returns.',
         accessibleText: 'Expected assists, ${val.toStringAsFixed(2)}',
+        isNegative: false,
       ));
     }
 
@@ -528,6 +690,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: '$pct%',
         explanation: 'Clean sheet bonus probability.',
         accessibleText: 'Clean sheet probability, $pct percent',
+        isNegative: false,
       ));
     }
 
@@ -539,6 +702,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: val.toStringAsFixed(2),
         explanation: 'Expected points deduction from goals conceded.',
         accessibleText: 'Goals conceded penalty, ${val.toStringAsFixed(2)}',
+        isNegative: val < 0,
       ));
     }
 
@@ -551,6 +715,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: '$pct%',
         explanation: 'Chance of hitting defensive contribution threshold.',
         accessibleText: 'Defensive contributions, $pct percent',
+        isNegative: false,
       ));
     }
 
@@ -562,6 +727,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: val.toStringAsFixed(2),
         explanation: 'Estimated bonus points from BPS ranking.',
         accessibleText: 'Expected bonus, ${val.toStringAsFixed(2)}',
+        isNegative: false,
       ));
     }
 
@@ -573,6 +739,7 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
         value: val.toStringAsFixed(2),
         explanation: 'Deductions for projected yellow/red cards.',
         accessibleText: 'Card penalty, ${val.toStringAsFixed(2)}',
+        isNegative: val < 0,
       ));
     }
 
@@ -580,33 +747,35 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
       return Container(
         padding: const EdgeInsets.all(AppTokens.space16),
         decoration: BoxDecoration(
-          color: AppTokens.bgSurface,
+          color: colors.bgSurface,
           borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-          border: Border.all(color: AppTokens.borderSubtle),
+          border: Border.all(color: colors.borderSubtle),
         ),
         child: Text(
           'Component details not available.',
-          style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
+          style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
         ),
       );
     }
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTokens.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-        border: Border.all(color: AppTokens.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: items.length,
-        separatorBuilder: (_, __) => const Divider(
+        separatorBuilder: (_, __) => Divider(
           height: 1,
-          color: AppTokens.borderSubtle,
+          color: colors.borderSubtle,
         ),
         itemBuilder: (context, index) {
           final item = items[index];
+          final valueColor = item.isNegative ? colors.statusError : colors.textPrimary;
+
           return Semantics(
             label: item.accessibleText,
             child: Padding(
@@ -624,26 +793,36 @@ class _PlayerDetailScreenState extends ConsumerState<PlayerDetailScreen> {
                           item.label,
                           style: AppTextStyles.body.copyWith(
                             fontWeight: FontWeight.w600,
+                            color: colors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: AppTokens.space2),
                         Text(
                           item.explanation,
                           style: AppTextStyles.caption.copyWith(
-                            color: AppTokens.textSecondary,
+                            color: colors.textSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: AppTokens.space12),
-                  Text(
-                    item.value,
-                    style: AppTextStyles.numeric.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTokens.goldPrimary,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (item.isNegative) ...[
+                        Icon(Icons.arrow_drop_down, color: colors.statusError, size: 18),
+                        const SizedBox(width: 2),
+                      ],
+                      Text(
+                        item.value,
+                        style: AppTextStyles.numeric.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: valueColor,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -660,11 +839,13 @@ class _AttributionItem {
   final String value;
   final String explanation;
   final String accessibleText;
+  final bool isNegative;
 
   const _AttributionItem({
     required this.label,
     required this.value,
     required this.explanation,
     required this.accessibleText,
+    required this.isNegative,
   });
 }
