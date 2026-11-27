@@ -1,0 +1,25 @@
+name: Schedule Snapshot Archive
+
+on:
+  schedule:
+    # Run hourly so daily, T-24h, T-3h, T-1h deadline, and 09:00 UK post-GW windows are captured;
+    # unchanged payloads are deduplicated by SHA-256 content hash.
+    - cron: '15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger-snapshot-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Snapshot Archive Job
+        run: |
+          STATUS=$(curl -s -o response.json -w "%{http_code}" \
+            -X POST "${{ secrets.BACKEND_URL }}/internal/jobs/snapshot-archive" \
+            -H "X-Job-Token: ${{ secrets.JOB_TOKEN }}" \
+            -H "Content-Type: application/json")
+          echo "HTTP Status: $STATUS"
+          cat response.json
+          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 300 ]; then
+            echo "Snapshot archive job failed with status $STATUS"
+            exit 1
+          fi

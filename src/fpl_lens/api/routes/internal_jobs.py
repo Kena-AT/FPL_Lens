@@ -95,6 +95,12 @@ async def trigger_internal_job(
         result = await dispatch_injury_alerts(db)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
+    if name == "snapshot-archive":
+        from fpl_lens.services.snapshot_archive import run_snapshot_archive_job
+
+        result = await run_snapshot_archive_job(db)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
     raise AppError(
         code="NOT_FOUND",
         message=f"Unknown internal job '{name}'",
