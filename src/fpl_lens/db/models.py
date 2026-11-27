@@ -317,6 +317,41 @@ class AuditEvent(Base):
     audit_metadata = Column("metadata", JSONB, nullable=True)
 
 
+class SnapshotBlob(Base):
+    """Deduplicated gzip-compressed public FPL payload keyed by SHA-256 content hash (§4.2)."""
+
+    __tablename__ = "snapshot_blobs"
+
+    content_hash = Column(String(64), primary_key=True)
+    source = Column(String(32), nullable=False)  # bootstrap-static | fixtures
+    payload_gzip = Column(LargeBinary, nullable=False)
+    raw_bytes = Column(Integer, nullable=False)
+    compressed_bytes = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class SnapshotRecord(Base):
+    """Immutable timestamped point-in-time record of a public FPL snapshot fetch (§4.2)."""
+
+    __tablename__ = "snapshot_records"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    source = Column(String(32), nullable=False)  # bootstrap-static | fixtures
+    fetched_at = Column(DateTime(timezone=True), nullable=False)
+    http_status = Column(Integer, nullable=False)
+    content_hash = Column(
+        String(64), ForeignKey("snapshot_blobs.content_hash", ondelete="RESTRICT"), nullable=False
+    )
+    trigger_reason = Column(String(32), nullable=False)  # daily | t_24h | t_3h | t_1h | post_gw | manual
+    gameweek = Column(Integer, nullable=True)
+    is_duplicate = Column(Boolean, nullable=False, default=False)
+
+    __table_args__ = (
+        Index("idx_snapshot_source_fetched", "source", text("fetched_at DESC")),
+        Index("idx_snapshot_gw", "gameweek"),
+    )
+
+
 @event.listens_for(Session, "before_flush")
 def protect_owner_account_from_deletion(session, flush_context, instances):
     for obj in session.deleted:
