@@ -29,7 +29,7 @@ class EngineInvariants {
           'Non-finite projection values for player ${p.fplId} (${p.webName})',
         );
       }
-      if (p.pStart < 0.0 || p.pStart > 1.0 || p.pSub < 0.0 || p.pSub > 1.0 || p.pStart + p.pSub > 1.0 + 1e-9) {
+      if (p.pStart < 0.0 || p.pStart > 1.0 || p.pSub < 0.0 || p.pSub > 1.0) {
         throw InvariantViolationException(
           'I12',
           'Invalid probabilities for player ${p.fplId}: pStart=${p.pStart}, pSub=${p.pSub}',
@@ -91,6 +91,22 @@ class EngineInvariants {
     if (remainingBudget < 0) return 'I6';
 
     return null;
+  }
+
+  /// I12: Strict Layer 1 v2 probability partition check: pStart + pSub + pZero == 1.
+  static void checkProbabilityPartition(double pStart, double pSub, double pZero) {
+    if (pStart < 0.0 ||
+        pStart > 1.0 ||
+        pSub < 0.0 ||
+        pSub > 1.0 ||
+        pZero < 0.0 ||
+        pZero > 1.0 ||
+        (pStart + pSub + pZero - 1.0).abs() > 1e-9) {
+      throw InvariantViolationException(
+        'I12',
+        'Probability partition must sum to 1: pStart=$pStart, pSub=$pSub, pZero=$pZero',
+      );
+    }
   }
 
   /// I16: Returns true if snapshot is missing or older than maxAgeMinutes (default 30 min).
