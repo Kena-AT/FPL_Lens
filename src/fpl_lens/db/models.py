@@ -139,6 +139,7 @@ class Player(Base):
     __tablename__ = "players"
 
     fpl_id = Column(Integer, primary_key=True)
+    code = Column(Integer, nullable=True)  # Stable cross-season FPL person key (§4.3)
     first_name = Column(String(64), nullable=False)
     second_name = Column(String(64), nullable=False)
     web_name = Column(String(64), nullable=False)
@@ -146,6 +147,7 @@ class Player(Base):
     team_fpl_id = Column(Integer, ForeignKey("teams.fpl_id"), nullable=False)
     now_cost = Column(Integer, nullable=False)  # tenths of Â£m
     status = Column(String(2), nullable=False)
+    chance_of_playing_this_round = Column(Integer, nullable=True)
     chance_of_playing_next_round = Column(Integer, nullable=True)
     news = Column(Text, nullable=True)
     news_added_at = Column(DateTime(timezone=True), nullable=True)
@@ -155,7 +157,10 @@ class Player(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (Index("idx_players_team", "team_fpl_id"),)
+    __table_args__ = (
+        Index("idx_players_team", "team_fpl_id"),
+        Index("uq_players_code", "code", unique=True, postgresql_where=text("code IS NOT NULL")),
+    )
 
 
 class Gameweek(Base):

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../engine/invariants/engine_invariants.dart';
 import 'lineup_optimiser.dart';
 import 'player_candidate.dart';
 
@@ -191,6 +192,14 @@ class TransferOptimiser {
       horizon: 1,
     );
 
+    // Enforce I10 (unique fplId, no conflicting duplicate records) across squad & pool
+    final validatedSquad = EngineInvariants.validateAndDeduplicatePool(currentSquad);
+    if (validatedSquad.length != 15) {
+      throw const InvariantViolationException('I4', 'Squad must contain 15 unique players');
+    }
+    EngineInvariants.validateAndDeduplicatePool([...validatedSquad, ...availablePool]);
+    final validatedPool = EngineInvariants.validateAndDeduplicatePool(availablePool);
+
     // Group available pool by position, sorted by xP descending
     final poolByPos = <String, List<PlayerCandidate>>{
       'GK': [],
@@ -198,9 +207,9 @@ class TransferOptimiser {
       'MID': [],
       'FWD': [],
     };
-    final currentSquadIds = currentSquad.map((p) => p.fplId).toSet();
+    final currentSquadIds = validatedSquad.map((p) => p.fplId).toSet();
 
-    for (final p in availablePool) {
+    for (final p in validatedPool) {
       if (!currentSquadIds.contains(p.fplId) && poolByPos.containsKey(p.position)) {
         poolByPos[p.position]!.add(p);
       }
