@@ -89,8 +89,11 @@ def test_classify_trigger_reason_windows(db_session: Session):
     """Verifies deadline proximity classification for T-24h, T-3h, T-1h, post_gw, and daily."""
     now = datetime(2026, 11, 27, 12, 0, tzinfo=UTC)
     existing_next = db_session.query(Gameweek).filter(Gameweek.is_next.is_(True)).all()
+    existing_current = db_session.query(Gameweek).filter(Gameweek.is_current.is_(True)).all()
     for eg in existing_next:
         eg.is_next = False
+    for eg in existing_current:
+        eg.is_current = False
     gw = Gameweek(
         id=999,
         name="Test Gameweek 999",
@@ -123,10 +126,20 @@ def test_classify_trigger_reason_windows(db_session: Session):
         db_session.commit()
         reason, _ = classify_trigger_reason(db_session, now)
         assert reason == "daily"
+
+        gw_row.is_next = False
+        gw_row.is_current = True
+        gw_row.finished = True
+        db_session.commit()
+        reason, gw_id = classify_trigger_reason(db_session, now)
+        assert reason == "post_gw"
+        assert gw_id == 999
     finally:
         db_session.query(Gameweek).filter(Gameweek.id == 999).delete(synchronize_session=False)
         for eg in existing_next:
             eg.is_next = True
+        for eg in existing_current:
+            eg.is_current = True
         db_session.commit()
 
 

@@ -57,7 +57,16 @@ def classify_trigger_reason(db: Session, now: datetime) -> tuple[str, int | None
 
     cur_gw = db.query(Gameweek).filter(Gameweek.is_current.is_(True)).first()
     if cur_gw is not None and cur_gw.finished:
-        return "post_gw", int(cur_gw.id)
+        already_archived_post_gw = (
+            db.query(SnapshotRecord)
+            .filter(
+                SnapshotRecord.trigger_reason == "post_gw",
+                SnapshotRecord.gameweek == int(cur_gw.id),
+            )
+            .first()
+        )
+        if already_archived_post_gw is None:
+            return "post_gw", int(cur_gw.id)
 
     target_gw = int(next_gw.id) if next_gw is not None else (int(cur_gw.id) if cur_gw else None)
     return "daily", target_gw
