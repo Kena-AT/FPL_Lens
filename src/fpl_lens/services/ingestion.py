@@ -26,6 +26,7 @@ from fpl_lens.db.models import (
 from fpl_lens.logging import logger
 from fpl_lens.services.cache import set_cached_value
 from fpl_lens.services.fpl_client import UpstreamUnavailableError, fpl_client
+from fpl_lens.services.quality_gates import validate_bootstrap_snapshot
 
 POSITION_MAP = {
     1: "GK",
@@ -78,6 +79,16 @@ async def run_bootstrap_job(
 
     try:
         data = bootstrap_data or await fpl_client.get_bootstrap_static(enforce_throttle=False)
+
+        gate = validate_bootstrap_snapshot(data)
+        if not gate.accepted:
+            msg = f"Bootstrap quality gate rejected snapshot: {gate.rejected_reason}"
+            logger.error(msg)
+            _finish_ingestion_run(db, run, "FAILED", 0, msg)
+            raise ValueError(msg)
+        for alert in gate.alerts:
+            logger.warning("Bootstrap quality gate alert: %s", alert)
+        quarantined_ids = set(gate.quarantined_player_ids)
 
         # 1. Teams
         team_values = []
@@ -169,6 +180,10 @@ async def run_bootstrap_job(
         # 3. Players (Elements)
         element_values = []
         for raw_element in data.get("elements", []):
+            if raw_element.get("id") in quarantined_ids:
+                failed_records += 1
+                errors.append(f"Player {raw_element.get('id')} quarantined by quality gate")
+                continue
             try:
                 el = FPLElementSchema.model_validate(raw_element)
                 pos = POSITION_MAP.get(el.element_type)
@@ -178,6 +193,7 @@ async def run_bootstrap_job(
                 element_values.append(
                     {
                         "fpl_id": el.id,
+                        "code": el.code,
                         "first_name": el.first_name,
                         "second_name": el.second_name,
                         "web_name": el.web_name,
@@ -185,6 +201,7 @@ async def run_bootstrap_job(
                         "team_fpl_id": el.team,
                         "now_cost": el.now_cost,
                         "status": el.status,
+                        "chance_of_playing_this_round": el.chance_of_playing_this_round,
                         "chance_of_playing_next_round": el.chance_of_playing_next_round,
                         "news": el.news,
                         "news_added_at": el.news_added,
@@ -204,6 +221,7 @@ async def run_bootstrap_job(
             stmt = stmt.on_conflict_do_update(
                 index_elements=["fpl_id"],
                 set_={
+                    "code": stmt.excluded.code,
                     "first_name": stmt.excluded.first_name,
                     "second_name": stmt.excluded.second_name,
                     "web_name": stmt.excluded.web_name,
@@ -211,6 +229,7 @@ async def run_bootstrap_job(
                     "team_fpl_id": stmt.excluded.team_fpl_id,
                     "now_cost": stmt.excluded.now_cost,
                     "status": stmt.excluded.status,
+                    "chance_of_playing_this_round": stmt.excluded.chance_of_playing_this_round,
                     "chance_of_playing_next_round": stmt.excluded.chance_of_playing_next_round,
                     "news": stmt.excluded.news,
                     "news_added_at": stmt.excluded.news_added_at,

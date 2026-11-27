@@ -71,6 +71,7 @@ class FPLTeamSchema(FPLBaseModel):
 
 class FPLElementSchema(FPLBaseModel):
     id: int
+    code: int | None = None
     first_name: str
     second_name: str
     web_name: str
@@ -78,6 +79,7 @@ class FPLElementSchema(FPLBaseModel):
     team: int
     now_cost: int
     status: str
+    chance_of_playing_this_round: int | None = None
     chance_of_playing_next_round: int | None = None
     news: str | None = None
     news_added: datetime | None = None
