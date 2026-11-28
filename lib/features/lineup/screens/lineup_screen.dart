@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/engine/layer3/player_touch_viewmodel.dart';
 import '../../../core/optimiser/player_candidate.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -10,6 +11,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/freshness_label.dart';
 import '../../../core/widgets/pitch_view.dart';
 import '../../squad/providers/squad_provider.dart';
+import '../player_touch_sheet.dart';
 import '../providers/lineup_provider.dart';
 
 /// Screen P10: LineupScreen (Spec §5, Frontend Implementation Plan §3).
@@ -37,171 +39,41 @@ class _LineupScreenState extends ConsumerState<LineupScreen> {
   }
 
   void _showPlayerActionSheet(PlayerCandidate player, int gameweek) {
-    showModalBottomSheet(
+    final squadState = ref.read(squadNotifierProvider);
+    final lineupState = ref.read(lineupNotifierProvider);
+    final result = lineupState.result;
+    final currentSquad = result != null
+        ? [...result.startingXi, ...result.bench]
+        : const <PlayerCandidate>[];
+    final isBench = result?.bench.any((b) => b.fplId == player.fplId) ?? false;
+
+    final vm = currentSquad.length == 15
+        ? PlayerTouchViewModelBuilder.build(
+            outgoingPlayer: player,
+            currentSquad: currentSquad,
+            availablePool: const [],
+            bankTenths: squadState.bankTenths,
+            freeTransfersAvailable: squadState.freeTransfers,
+            isBenchPlayer: isBench,
+            snapshotFetchedAt: squadState.lastSyncTime ?? DateTime.now().toUtc(),
+          )
+        : PlayerTouchViewModel(
+            outgoingPlayer: player,
+            isBenchPlayer: isBench,
+            isStale: false,
+            confidence: 'MEDIUM',
+            topOptions: const [],
+            allOptions: const [],
+            emptyReason: PlayerTouchMessages.noBudget,
+          );
+
+    showPlayerTouchSheet(
       context: context,
-      backgroundColor: AppTokens.bgSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTokens.radiusSheet)),
-      ),
-      builder: (context) {
-        final pStartPct = (player.pStart * 100).round();
-        final expectedMins = (player.pStart * 90).round();
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppTokens.screenGutter, vertical: 16.0),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36.0,
-                      height: 4.0,
-                      margin: const EdgeInsets.only(bottom: 12.0),
-                      decoration: BoxDecoration(
-                        color: AppTokens.borderSubtle,
-                        borderRadius: BorderRadius.circular(2.0),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    player.webName,
-                    style: AppTextStyles.headline.copyWith(color: AppTokens.textPrimary),
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    '${player.position} • ${(player.priceTenths / 10.0).toStringAsFixed(1)}m • ${player.xp} xP',
-                    style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 14.0),
-
-                  // xP Attribution & Mathematical Breakdown Card
-                  Container(
-                    padding: const EdgeInsets.all(AppTokens.space12),
-                    decoration: BoxDecoration(
-                      color: AppTokens.bgElevated,
-                      borderRadius: BorderRadius.circular(AppTokens.radiusCard),
-                      border: Border.all(color: AppTokens.borderSubtle),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'xP CALCULATION EXPLANATION',
-                              style: AppTextStyles.label.copyWith(
-                                color: AppTokens.goldPrimary,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.6,
-                              ),
-                            ),
-                            Text(
-                              '${player.xp} xP',
-                              style: AppTextStyles.numeric.copyWith(
-                                color: AppTokens.goldPrimary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8.0),
-                        _buildAttributionRow('Start Probability', '$pStartPct% expected starting chance'),
-                        _buildAttributionRow('Expected Minutes', '~$expectedMins mins expected'),
-                        _buildAttributionRow(
-                          'Scoring Profile',
-                          player.position == 'GK' || player.position == 'DEF'
-                              ? 'Clean sheet potential (4 pts) + defensive baseline'
-                              : 'Attacking returns (goals & assists threat)',
-                        ),
-                        _buildAttributionRow(
-                          'Deterministic Basis',
-                          'Based on form, FDR fixture rating & underlying team stats',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12.0),
-
-                  // Action Buttons
-                  Material(
-                    color: Colors.transparent,
-                    child: ListTile(
-                      leading: const Icon(Icons.grid_on_rounded, color: AppTokens.goldPrimary),
-                      title: const Text('View Fixture Heatmap', style: TextStyle(color: AppTokens.textPrimary)),
-                      subtitle: const Text('See 5-GW difficulty matrix & fixture swings', style: TextStyle(color: AppTokens.textSecondary, fontSize: 11)),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        context.push('/heatmap');
-                      },
-                    ),
-                  ),
-                  Material(
-                    color: Colors.transparent,
-                    child: ListTile(
-                      leading: const Icon(Icons.star_rounded, color: AppTokens.goldPrimary),
-                      title: const Text('Make Captain', style: TextStyle(color: AppTokens.textPrimary)),
-                      onTap: () {
-                        ref.read(lineupNotifierProvider.notifier).setManualCaptain(player.fplId);
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                  Material(
-                    color: Colors.transparent,
-                    child: ListTile(
-                      leading: const Icon(Icons.star_half_rounded, color: AppTokens.textSecondary),
-                      title: const Text('Make Vice-Captain', style: TextStyle(color: AppTokens.textPrimary)),
-                      onTap: () {
-                        ref.read(lineupNotifierProvider.notifier).setManualViceCaptain(player.fplId);
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                  Material(
-                    color: Colors.transparent,
-                    child: ListTile(
-                      leading: const Icon(Icons.restore_rounded, color: AppTokens.statusOut),
-                      title: const Text('Clear Manual Overrides', style: TextStyle(color: AppTokens.statusOut)),
-                      onTap: () {
-                        ref.read(lineupNotifierProvider.notifier).clearOverrides();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  static Widget _buildAttributionRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• ', style: TextStyle(color: AppTokens.goldPrimary, fontSize: 12)),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: AppTextStyles.caption.copyWith(color: AppTokens.textSecondary, fontSize: 11.5),
-                children: [
-                  TextSpan(text: '$label: ', style: const TextStyle(color: AppTokens.textPrimary, fontWeight: FontWeight.w600)),
-                  TextSpan(text: value),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+      viewModel: vm,
+      gameweek: gameweek,
+      onMakeCaptain: () => ref.read(lineupNotifierProvider.notifier).setManualCaptain(player.fplId),
+      onMakeViceCaptain: () => ref.read(lineupNotifierProvider.notifier).setManualViceCaptain(player.fplId),
+      onClearOverrides: () => ref.read(lineupNotifierProvider.notifier).clearOverrides(),
     );
   }
 
