@@ -94,6 +94,25 @@ class EngineInvariants {
     return null;
   }
 
+  /// I7: Verifies hit cost equals 4 * max(0, transfers - freeTransfers) or 0 under WC/FH.
+  static void checkHitInvariant({
+    required int transfersCount,
+    required int freeTransfersAvailable,
+    required int hitCost,
+    bool isWildcardOrFreeHit = false,
+  }) {
+    final hitPerTransfer = RulesTable.getInt('extra_transfer_hit_cost');
+    final expected = isWildcardOrFreeHit
+        ? 0
+        : hitPerTransfer * (transfersCount > freeTransfersAvailable ? transfersCount - freeTransfersAvailable : 0);
+    if (hitCost != expected) {
+      throw InvariantViolationException(
+        'I7',
+        'Hit cost $hitCost != expected $expected (transfers=$transfersCount, ft=$freeTransfersAvailable)',
+      );
+    }
+  }
+
   /// I12: Strict Layer 1 v2 probability partition check: pStart + pSub + pZero == 1.
   static void checkProbabilityPartition(double pStart, double pSub, double pZero) {
     if (pStart < 0.0 ||
