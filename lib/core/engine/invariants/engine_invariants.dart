@@ -1,3 +1,4 @@
+import '../../optimiser/formation_validator.dart';
 import '../../optimiser/player_candidate.dart';
 import '../../rules/rules_table.dart';
 
@@ -105,6 +106,57 @@ class EngineInvariants {
       throw InvariantViolationException(
         'I12',
         'Probability partition must sum to 1: pStart=$pStart, pSub=$pSub, pZero=$pZero',
+      );
+    }
+  }
+
+  /// I8 & I9: Validates starting XI formation and distinct captain/vice-captain in XI.
+  static void checkLineupInvariants({
+    required List<PlayerCandidate> startingXi,
+    required PlayerCandidate captain,
+    required PlayerCandidate viceCaptain,
+  }) {
+    if (startingXi.length != RulesTable.getInt('xi_size')) {
+      throw InvariantViolationException(
+        'I8',
+        'Starting XI must have 11 players, got ${startingXi.length}',
+      );
+    }
+    var gk = 0, def = 0, mid = 0, fwd = 0;
+    final xiIds = <int>{};
+    for (final p in startingXi) {
+      if (!xiIds.add(p.fplId)) {
+        throw InvariantViolationException('I8', 'Duplicate player ${p.fplId} in starting XI');
+      }
+      switch (p.position) {
+        case 'GK':
+          gk++;
+        case 'DEF':
+          def++;
+        case 'MID':
+          mid++;
+        case 'FWD':
+          fwd++;
+        default:
+          throw InvariantViolationException('I8', 'Invalid position ${p.position}');
+      }
+    }
+    if (!FormationValidator.isValidCounts(gk, def, mid, fwd)) {
+      throw InvariantViolationException(
+        'I8',
+        'Invalid formation ($gk-$def-$mid-$fwd)',
+      );
+    }
+    if (captain.fplId == viceCaptain.fplId) {
+      throw const InvariantViolationException(
+        'I9',
+        'Captain and vice-captain must be different players',
+      );
+    }
+    if (!xiIds.contains(captain.fplId) || !xiIds.contains(viceCaptain.fplId)) {
+      throw const InvariantViolationException(
+        'I9',
+        'Captain and vice-captain must both be in the starting XI',
       );
     }
   }
