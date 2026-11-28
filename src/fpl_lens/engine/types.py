@@ -18,6 +18,10 @@ class PlayerMatchHistory:
     bonus: int = 0
     yellow_cards: int = 0
     red_cards: int = 0
+    saves: int = 0
+    penalties_saved: int = 0
+    penalties_missed: int = 0
+    own_goals: int = 0
     total_points: int = 0
     expected_goals: float = 0.0
     expected_assists: float = 0.0
@@ -61,6 +65,10 @@ class PlayerFeatures:
     xg_90: float
     xa_90: float
     history: list[PlayerMatchHistory] = field(default_factory=list)
+    news_added_at: datetime | None = None
+    as_of: datetime | None = None
+    is_penalty_taker: bool = False
+    prior_season_starts: int = 0
 
 
 @dataclass(frozen=True)
@@ -112,3 +120,65 @@ class FixtureProjection:
     p_60_plus_given_start: float
     expected_minutes: float
     components: ProjectionComponents
+
+
+@dataclass(frozen=True)
+class ProjectionComponentsV2:
+    """12-term component breakdown per Engine Design §5.6 & §5.8 (signed, never clamped)."""
+
+    exp_appearance: float
+    exp_goals: float
+    exp_assists: float
+    exp_clean_sheet: float
+    exp_goals_conceded: float  # Non-positive
+    exp_saves: float
+    exp_penalty_saves: float
+    exp_penalty_misses: float  # Non-positive
+    exp_own_goals: float  # Non-positive
+    exp_dc: float
+    exp_bonus: float
+    exp_card_penalty: float  # Non-positive
+    expected_points: float
+
+    def component_sum(self) -> float:
+        return (
+            self.exp_appearance
+            + self.exp_goals
+            + self.exp_assists
+            + self.exp_clean_sheet
+            + self.exp_goals_conceded
+            + self.exp_saves
+            + self.exp_penalty_saves
+            + self.exp_penalty_misses
+            + self.exp_own_goals
+            + self.exp_dc
+            + self.exp_bonus
+            + self.exp_card_penalty
+        )
+
+
+@dataclass(frozen=True)
+class FixtureProjectionV2:
+    """Layer 1 v2 output contract per Engine Design §5.8."""
+
+    player_fpl_id: int
+    fixture_fpl_id: int
+    gameweek: int
+    p_start: float
+    p_sub: float
+    p_zero: float
+    p_play: float
+    xp: float
+    xp_given_play: float
+    xp_by_scenario: dict[str, float]  # S_B, S_C, S_D, S_E
+    components: ProjectionComponentsV2
+    interval50: tuple[float, float]
+    interval80: tuple[float, float]
+    confidence: str  # HIGH | MEDIUM | LOW
+    confidence_reasons: tuple[str, ...]
+    inputs_hash: str
+    model_version: str
+    rules_version: str
+    is_calibrated: bool = False
+    is_blank: bool = False
+    label: str | None = None
